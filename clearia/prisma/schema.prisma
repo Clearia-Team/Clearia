@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Enum for patient status in the ICU
+enum ICUStatus {
+  CRITICAL
+  STABLE
+  IMPROVING
+  RECOVERED
+  DECEASED
+}
+
+// Hospital staff (doctors, nurses, etc.)
+model Staff {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  role      String   // e.g., "Doctor", "Nurse"
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  statusUpdates StatusUpdate[] // Staff can update patient statuses
+}
+
+// Patient information
+model Patient {
+  id          String      @id @default(uuid())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  gender      String
+  contactInfo String?     // Optional: phone, email, etc.
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  icuAdmissions ICUAdmission[]
+}
+
+// ICU Admission record (tracks a patient's stay in the ICU)
+model ICUAdmission {
+  id          String      @id @default(uuid())
+  patientId   String
+  admissionDate DateTime  @default(now())
+  dischargeDate DateTime?
+  bedNumber   Int         // ICU bed assignment
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  statusUpdates StatusUpdate[] // Status updates tied to this admission
+}
+
+// Status updates for ICU patients
+model StatusUpdate {
+  id            String    @id @default(uuid())
+  icuAdmissionId String
+  staffId       String
+  status        ICUStatus
+  notes         String?   // Optional notes from staff
+  timestamp     DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  icuAdmission  ICUAdmission @relation(fields: [icuAdmissionId], references: [id], onDelete: Cascade)
+  staff         Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
+}

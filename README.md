@@ -21,7 +21,7 @@ git checkout -b feature-branch-name
 
 ### 4️⃣ Navigate to the Project Directory
 ```sh
-cd clearia
+cd Clearia/clearia
 ```
 
 ### 5️⃣ Install Dependencies
@@ -35,16 +35,17 @@ Run the script to start a Docker container with PostgreSQL:
 ./start-database.sh
 ```
 
-### 7️⃣ Push Database Schema
-```sh
-npm run db:push
-```
-
-### 8️⃣ Set Up Environment Variables
+### 7️⃣ Set Up Environment Variables
 Copy the example `.env.example` file and create a `.env` file:
 ```sh
 cp .env.example .env
 ```
+
+### 8️⃣ Push Database Schema
+```sh
+npm run db:push
+```
+
 Modify `.env` with your database credentials and other necessary configurations.
 
 ### 9️⃣ Start the Development Server
@@ -53,16 +54,23 @@ npm run dev
 ```
 The app should now be running locally!
 
-## 🎯 Contributing
-1. Create a new branch for your feature.
-2. Make changes and commit them.
-3. Push to your fork and create a pull request.
+## Syncing Changes with the Original Repo
+To fetch the latest changes from the original repository, do the following:
+```sh
+git switch main
+git remote add upstream https://github.com/ParichayeGrover/Clearia.git
+git checkout main
+git fetch upstream
+git merge upstream/main
+git push origin main
+```
 
-## 🛠️ Tech Stack
-- **Node.js**
-- **Prisma** (Database ORM)
-- **PostgreSQL** (Database)
-- **Docker** (Containerization)
+## Contributing
+1. Create a branch: `git checkout -b feature-branch`
+2. Make your changes and commit them: `git commit -m "Description of changes"`
+3. Push to your fork: `git push origin feature-branch`
+4. Open a Pull Request on GitHub
+
 
 Happy coding! 🚀
 

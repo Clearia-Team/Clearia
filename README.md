@@ -54,16 +54,51 @@ npm run dev
 ```
 The app should now be running locally!
 
-## Syncing Changes with the Original Repo
-To fetch the latest changes from the original repository, do the following:
+
+## Syncing Changes from the Original Repository
+To keep your fork up to date with the original repository, follow these steps:
+
+### 1. Switch to `main`
 ```sh
-git switch main
+git switch main  # or `git checkout main`
+```
+
+### 2. Add the Original Repository as Upstream (if not already added)
+```sh
 git remote add upstream https://github.com/ParichayeGrover/Clearia.git
-git checkout main
+```
+
+### 3. Fetch and Merge Latest Changes
+```sh
 git fetch upstream
-git merge upstream/main
+git merge upstream/main  # or `git rebase upstream/main` for a cleaner history
+```
+
+### 4. Push the Updated `main` to Your Fork
+```sh
 git push origin main
 ```
+
+### 5. Sync Your Feature Branch with the Updated `main`
+```sh
+git switch your-branch-name  # Switch to your branch
+git merge main  # Merge latest changes into your branch
+```
+Alternatively, for a cleaner commit history, use rebase:
+```sh
+git rebase main
+```
+
+### 6. Push the Updated Branch (If Needed)
+```sh
+git push origin your-branch-name
+```
+If you rebased, you may need to force push:
+```sh
+git push --force origin your-branch-name
+```
+
+Now your feature branch includes the latest updates from the original repository!
 
 ## Contributing
 1. Create a branch: `git checkout -b feature-branch`

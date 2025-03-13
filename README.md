@@ -41,9 +41,9 @@ npm run db:push
 ```
 
 ### 8️⃣ Set Up Environment Variables
-Copy the example `.env.js` file and create a `.env` file:
+Copy the example `.env.example` file and create a `.env` file:
 ```sh
-cp .env.js .env
+cp .env.example .env
 ```
 Modify `.env` with your database credentials and other necessary configurations.
 

@@ -21,7 +21,7 @@ git checkout -b feature-branch-name
 
 ### 4️⃣ Navigate to the Project Directory
 ```sh
-cd clearia
+cd Clearia/clearia
 ```
 
 ### 5️⃣ Install Dependencies
@@ -35,16 +35,17 @@ Run the script to start a Docker container with PostgreSQL:
 ./start-database.sh
 ```
 
-### 7️⃣ Push Database Schema
-```sh
-npm run db:push
-```
-
-### 8️⃣ Set Up Environment Variables
+### 7️⃣ Set Up Environment Variables
 Copy the example `.env.example` file and create a `.env` file:
 ```sh
 cp .env.example .env
 ```
+
+### 8️⃣ Push Database Schema
+```sh
+npm run db:push
+```
+
 Modify `.env` with your database credentials and other necessary configurations.
 
 ### 9️⃣ Start the Development Server
@@ -53,16 +54,58 @@ npm run dev
 ```
 The app should now be running locally!
 
-## 🎯 Contributing
-1. Create a new branch for your feature.
-2. Make changes and commit them.
-3. Push to your fork and create a pull request.
 
-## 🛠️ Tech Stack
-- **Node.js**
-- **Prisma** (Database ORM)
-- **PostgreSQL** (Database)
-- **Docker** (Containerization)
+## Syncing Changes from the Original Repository
+To keep your fork up to date with the original repository, follow these steps:
+
+### 1. Switch to `main`
+```sh
+git switch main  # or `git checkout main`
+```
+
+### 2. Add the Original Repository as Upstream (if not already added)
+```sh
+git remote add upstream https://github.com/ParichayeGrover/Clearia.git
+```
+
+### 3. Fetch and Merge Latest Changes
+```sh
+git fetch upstream
+git merge upstream/main  # or `git rebase upstream/main` for a cleaner history
+```
+
+### 4. Push the Updated `main` to Your Fork
+```sh
+git push origin main
+```
+
+### 5. Sync Your Feature Branch with the Updated `main`
+```sh
+git switch your-branch-name  # Switch to your branch
+git merge main  # Merge latest changes into your branch
+```
+Alternatively, for a cleaner commit history, use rebase:
+```sh
+git rebase main
+```
+
+### 6. Push the Updated Branch (If Needed)
+```sh
+git push origin your-branch-name
+```
+If you rebased, you may need to force push:
+```sh
+git push --force origin your-branch-name
+```
+
+Now your feature branch includes the latest updates from the original repository!
+
+## Contributing
+1. Create a branch: `git checkout -b feature-branch`
+2. Make your changes and commit them: `git commit -m "Description of changes"`
+3. Push to your fork: `git push origin feature-branch`
+4. Open a Pull Request on GitHub
+
 
 Happy coding! 🚀
 

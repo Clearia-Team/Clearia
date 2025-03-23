@@ -52,6 +52,13 @@ Modify `.env` with your database credentials and other necessary configurations.
 ```sh
 npm run dev
 ```
+
+### 🔟 Start prisma locally 
+```sh
+npx prisma db push
+npx prisma db generate
+npx prisma studio
+```
 The app should now be running locally!
 
 

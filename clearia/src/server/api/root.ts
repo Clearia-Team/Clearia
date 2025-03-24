@@ -1,5 +1,8 @@
-import { icuRouter } from "~/server/api/routers/icu";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { userRouter } from "./routers/user";
+import { patientRouter } from "./routers/patient";
+import { icuAdmissionRouter } from "./routers/icuAdmission";
+import { statusUpdateRouter } from "./routers/statusUpdates";
 
 /**
  * This is the primary router for your server.
@@ -7,7 +10,10 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  icu: icuRouter,
+  user: userRouter,
+  patient: patientRouter,
+  icuAdmission: icuAdmissionRouter,
+  statusUpdate: statusUpdateRouter,
 });
 
 // export type definition of API

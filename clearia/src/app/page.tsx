@@ -21,28 +21,25 @@ export default async function Home() {
           </h1>
           <div className="space-y-8">
             <div className="border-b pb-6">
-              <StatusUpdateDashboard />
-            </div>
-            <div className="border-b pb-6">
-              <IcuAdmissionsManager />
+              <UsersManager />
             </div>
             <div className="border-b pb-6">
               <LatestUser />
             </div>
-            <div className="border-b pb-6">
-              <AllUsers />
+            <div>
+              <PatientsManager />
             </div>
             <div className="border-b pb-6">
-              <UsersManager />
+              <StatusUpdateDashboard />
+            </div>
+            <div className="border-b pb-6">
+              <AllUsers />
             </div>
             <div className="border-b pb-6">
               <LatestPatient />
             </div>
             <div className="border-b pb-6">
               <AllPatients />
-            </div>
-            <div>
-              <PatientsManager />
             </div>
           </div>
         </div>

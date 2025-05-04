@@ -27,7 +27,10 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"]
-    }
+    },
+
+    /* Add NextAuth Type Support */
+    "types": ["next-auth"]
   },
   "include": [
     ".eslintrc.cjs",
@@ -36,7 +39,9 @@
     "**/*.tsx",
     "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "types"  // <--- Include the custom types directory
   ],
   "exclude": ["node_modules"]
 }
+

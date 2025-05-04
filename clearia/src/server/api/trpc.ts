@@ -7,6 +7,7 @@
  * need to use are documented accordingly near the end.
  */
 import { initTRPC } from "@trpc/server";
+import { getSession } from "next-auth/react";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
@@ -25,8 +26,10 @@ import { db } from "~/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const session = await getSession({ req: opts.headers });
   return {
     db,
+    session,
     ...opts,
   };
 };
@@ -103,4 +106,15 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
+
+// Middleware to check for authenticated users
+const isAuthenticated = t.middleware(async ({ next, ctx }) => {
+  if (!ctx.session?.user) { // Check for session or authentication token
+    throw new Error("You are not authenticated"); // Unauthorized error
+  }
+  return next(); // Proceed to the next middleware or procedure if authenticated
+});
+
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+export const protectedProcedure = t.procedure.use(isAuthenticated).use(timingMiddleware);

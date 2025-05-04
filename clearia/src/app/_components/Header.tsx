@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import logo from '/assets/logo.png';
 import { AccountCircle } from '@mui/icons-material';
+import Image from 'next/image';
 
 const Header = () => {
   return (
@@ -9,7 +10,7 @@ const Header = () => {
       
       {/* Logo on the Left */}
       <Link to="/">
-        <img src={logo} alt="Logo" className="h-14 mr-4" />
+        <Image src={logo} alt="Logo" className="h-14 mr-4" />
       </Link>
 
       {/* Navigation Buttons in the Center */}

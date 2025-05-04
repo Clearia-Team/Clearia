@@ -1,6 +1,8 @@
 "use client";
+
 import React, { useState } from "react";
 import Link from "next/link";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Dashboard,
   Person,
@@ -11,7 +13,8 @@ import {
 } from "@mui/icons-material";
 
 const DashboardPage = () => {
-  // Sample treatment data
+  const { data: session, status } = useSession();
+
   const [treatments] = useState([
     {
       id: 1,
@@ -29,55 +32,70 @@ const DashboardPage = () => {
     },
   ]);
 
-  // Sample appointments
   const [appointments] = useState([
     { id: 1, doctor: "Dr. Verma", date: "April 5, 2025", time: "10:00 AM" },
     { id: 2, doctor: "Dr. Khanna", date: "April 12, 2025", time: "2:30 PM" },
   ]);
 
+  if (status === "loading") return <div>Loading...</div>;
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Link
+          href="/auth/signin"
+          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          Login to continue
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-blue-600 text-white p-6 min-h-screen">
-        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <aside className="min-h-screen w-64 bg-blue-600 p-6 text-white">
+        <h1 className="mb-6 text-2xl font-bold">Dashboard</h1>
         <nav className="space-y-4">
           <Link
             href="/dashboard"
-            className="flex items-center space-x-2 hover:bg-blue-500 p-2 rounded"
+            className="flex items-center space-x-2 rounded p-2 hover:bg-blue-500"
           >
             <Dashboard /> <span>Overview</span>
           </Link>
           <Link
             href="/"
-            className="flex items-center space-x-2 hover:bg-blue-500 p-2 rounded"
+            className="flex items-center space-x-2 rounded p-2 hover:bg-blue-500"
           >
             <Person /> <span>Profile</span>
           </Link>
-          <Link
-            href="/admin/login"
-            className="flex items-center space-x-2 hover:bg-red-500 p-2 rounded"
+          <button
+            onClick={() => signOut()}
+            className="flex w-full items-center space-x-2 rounded p-2 text-left hover:bg-red-500"
           >
             <ExitToApp /> <span>Logout</span>
-          </Link>
+          </button>
         </nav>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 p-6">
-        <h1 className="text-3xl font-bold text-blue-600 mb-6">Welcome Back!</h1>
+        <h1 className="mb-6 text-3xl font-bold text-blue-600">
+          Welcome Back, {session?.user?.name ?? "User"}!
+        </h1>
 
-        {/* Dashboard Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Treatments Box */}
-          <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Treatments */}
+          <div className="rounded-lg border-l-4 border-blue-500 bg-white p-4 shadow-md">
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
               <MedicalServices className="text-blue-500" /> Current Treatments
             </h2>
             <div className="mt-4 space-y-3">
               {treatments.map((treatment) => (
                 <div
                   key={treatment.id}
-                  className="p-3 bg-gray-50 rounded-md shadow-sm"
+                  className="rounded-md bg-gray-50 p-3 shadow-sm"
                 >
                   <h3 className="font-semibold">{treatment.name}</h3>
                   <p className="text-gray-600">
@@ -91,16 +109,16 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Appointments Box */}
-          <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-green-500">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+          {/* Appointments */}
+          <div className="rounded-lg border-l-4 border-green-500 bg-white p-4 shadow-md">
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
               <Event className="text-green-500" /> Upcoming Appointments
             </h2>
             <div className="mt-4 space-y-3">
               {appointments.map((appointment) => (
                 <div
                   key={appointment.id}
-                  className="p-3 bg-gray-50 rounded-md shadow-sm"
+                  className="rounded-md bg-gray-50 p-3 shadow-sm"
                 >
                   <h3 className="font-semibold">{appointment.doctor}</h3>
                   <p className="text-gray-600">
@@ -111,16 +129,16 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Action Buttons Box */}
-          <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-500">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+          {/* Actions */}
+          <div className="rounded-lg border-l-4 border-purple-500 bg-white p-4 shadow-md">
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
               <History className="text-purple-500" /> Actions
             </h2>
             <div className="mt-4 flex flex-col space-y-3">
-              <button className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+              <button className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600">
                 Extract Medical History
               </button>
-              <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+              <button className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
                 Share Treatment Details
               </button>
             </div>
@@ -132,4 +150,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

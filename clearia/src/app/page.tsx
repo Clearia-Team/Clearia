@@ -20,9 +20,7 @@ export default async function Home() {
             Test <span className="text-[hsl(280,100%,70%)]">Clearia</span> App
           </h1>
           <div className="space-y-8">
-            <div className="border-b pb-6">
-              <UsersManager />
-            </div>
+            
             <div className="border-b pb-6">
               <LatestUser />
             </div>

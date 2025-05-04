@@ -16,8 +16,8 @@ const Login_check = () => {
           <li><button onClick={() => router.push("/auth/signin/staff")} className='w-full text-2xl! font-normal! hover:cursor-pointer text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>Staff </button></li>
           <li><button onClick={() => router.push("auth/signin/staff")} className='w-full text-2xl! font-normal! hover:cursor-pointer text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>Doctor</button></li>
         </ul>
-        <p className="mt-4">Don't have an account? <span onClick={() => router.push("/auth/signup")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
-        <p className="mt-4">Don't have an account?(Staff) <span onClick={() => router.push("/auth/signup/staff")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
+        <p className="mt-4">No account? <span onClick={() => router.push("/auth/signup")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
+        <p className="mt-4">No Account?(Staff) <span onClick={() => router.push("/auth/signup/staff")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
       </div>
     </div>
   )

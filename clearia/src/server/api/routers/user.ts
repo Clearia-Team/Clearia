@@ -25,19 +25,17 @@ export const userRouter = createTRPCRouter({
         throw new Error("Invalid email or password");
       }
 
-      const isMatch = await bcrypt.compare(
-        input.password,
-        user?.password as string,
-      );
+      const isMatch = await bcrypt.compare(input.password, user.password);
       if (!isMatch) {
         throw new Error("Invalid email or password");
       }
 
       return {
         success: true,
-        user: { id: user?.id, email: user?.email, role: user?.role },
+        user: { id: user.id, email: user.email, role: user.role },
       };
     }),
+
   createUser: publicProcedure
     .input(userSchema.omit({ id: true, createdAt: true, updatedAt: true }))
     .mutation(async ({ ctx, input }) => {
@@ -50,6 +48,7 @@ export const userRouter = createTRPCRouter({
         },
       });
     }),
+
   updateUser: publicProcedure
     .input(userSchema.partial())
     .mutation(async ({ ctx, input }) => {
@@ -66,4 +65,20 @@ export const userRouter = createTRPCRouter({
         where: { id: input.id },
       });
     }),
+
+  getLatest: publicProcedure.query(async ({ ctx }) => {
+    return ctx.db.user.findFirst({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }),
+  getAll: publicProcedure.query(async ({ ctx }) => {
+    return ctx.db.user.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }),
 });
+

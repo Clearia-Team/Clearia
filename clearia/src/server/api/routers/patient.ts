@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -30,13 +31,47 @@ export const patientRouter = createTRPCRouter({
     }),
 
   createPatient: publicProcedure
-    .input(patientSchema.omit({ id: true, createdAt: true, updatedAt: true }))
+    .input(
+      z.object({
+        firstName: z.string().min(2),
+        lastName: z.string().min(2),
+        dateOfBirth: z.date(),
+        medicalId: z.string().min(1),
+        allergies: z.string().optional(),
+        bloodType: z.string().optional(),
+        email: z.string().email(),
+        password: z.string().min(6), // Add password for the User
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.patient.create({
-        data: input,
-      });
-    }),
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(input.password, 10);
 
+      const user = await ctx.db.user.create({
+        data: {
+          email: input.email,
+          password: hashedPassword,
+          role: "PATIENT",
+          name: input.firstName + " " + input.lastName, // optional
+        },
+      });
+
+      const patient = await ctx.db.patient.create({
+        data: {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          dateOfBirth: input.dateOfBirth,
+          medicalId: input.medicalId,
+          allergies: input.allergies,
+          bloodType: input.bloodType,
+          user: {
+            connect: { id: user.id }, // ✅ Proper way to link user
+          },
+        },
+      });
+
+      return patient;
+    }),
   updatePatient: publicProcedure
     .input(patientSchema.partial())
     .mutation(async ({ ctx, input }) => {

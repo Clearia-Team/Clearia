@@ -19,29 +19,24 @@ export default async function Home() {
             Test <span className="text-[hsl(280,100%,70%)]">Clearia</span> App
           </h1>
           <div className="space-y-8">
+            
+            <div className="border-b pb-6">
+              <LatestUser />
+            </div>
+            <div>
+              <PatientsManager />
+            </div>
             <div className="border-b pb-6">
               <StatusUpdateDashboard />
             </div>
             <div className="border-b pb-6">
-              <IcuAdmissionsManager />
-            </div>
-            <div className="border-b pb-6">
-              <LatestUser />
-            </div>
-            <div className="border-b pb-6">
               <AllUsers />
-            </div>
-            <div className="border-b pb-6">
-              <UsersManager />
             </div>
             <div className="border-b pb-6">
               <LatestPatient />
             </div>
             <div className="border-b pb-6">
               <AllPatients />
-            </div>
-            <div>
-              <PatientsManager />
             </div>
           </div>
         </div>

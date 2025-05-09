@@ -1,9 +1,9 @@
+import { Inria_Sans } from 'next/font/google';
 import "~/styles/globals.css";
-
-import { GeistSans } from "geist/font/sans";
-import { type Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
+import ClientHeaderWrapper from "~/app/_components/ClientHeaderWrapper"; // ✅ Import it
+import { type Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Clearia",
@@ -11,14 +11,23 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/assets/logo.png" }],
 };
 
+const inria = Inria_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
+    <html lang="en" className={inria.className}>
       <body>
-        <SessionProvider> {/* 👈 Wrap your app with SessionProvider */}
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+        <SessionProvider>
+          <TRPCReactProvider>
+            <ClientHeaderWrapper> {/* 👈 Header wrapper here */}
+              {children}
+            </ClientHeaderWrapper>
+          </TRPCReactProvider>
         </SessionProvider>
       </body>
     </html>

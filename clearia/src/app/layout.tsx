@@ -2,7 +2,7 @@ import { Inria_Sans } from 'next/font/google';
 import "~/styles/globals.css";
 import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
-import ClientHeaderWrapper from "~/app/_components/ClientHeaderWrapper"; // ✅ Import it
+import ClientHeaderWrapper from "~/app/_components/ClientHeaderWrapper";
 import { type Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,20 +11,24 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/assets/logo.png" }],
 };
 
-const inria = Inria_Sans({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+// Load Inria Sans font using next/font/google
+const inriaSans = Inria_Sans({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
 });
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={inria.className}>
+    <html lang="en" className={inriaSans.className}>
       <body>
         <SessionProvider>
           <TRPCReactProvider>
-            <ClientHeaderWrapper> {/* 👈 Header wrapper here */}
+            <ClientHeaderWrapper>
               {children}
             </ClientHeaderWrapper>
           </TRPCReactProvider>

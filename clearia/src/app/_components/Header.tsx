@@ -30,7 +30,7 @@ const Header = () => {
       </div>
 
       {/* Account Icon (Linked to Register Page) */}
-      <Link href="/auth/signup" passHref>
+      <Link href="/auth/register" passHref>
         <AccountCircle
           style={{ fontSize: '35px', color: 'white' }}
           className="cursor-pointer hover:text-gray-300 transition mr-6"

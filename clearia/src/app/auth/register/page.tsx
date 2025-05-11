@@ -1,27 +1,107 @@
-"use client";
+'use client';
 
-import React from 'react'
-import { useRouter } from 'next/navigation'
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { api } from '~/trpc/react';
 
-const Login_check = () => {
+export default function PatientSignUpPage() {
   const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm();
+
+  const createPatient = api.patient.createPatient.useMutation();
+
+  const onSubmit = async (data: any) => {
+    try {
+      await createPatient.mutateAsync({
+        ...data,
+        dateOfBirth: new Date(data.dateOfBirth),
+      });
+      router.push('/auth/signin');
+    } catch (error: any) {
+      alert(error?.message || 'Sign up failed');
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 px-6">
-      <div className='flex-col justify-center items-center'>
-        <h2 className="text-4xl font-bold text-blue-600 mb-4 justify-center items-center">Login</h2>
-        <ul>
-          <li><button onClick={() => router.push("/auth/signin")} className='text-white font-normal! bg-gradient-to-br w-full text-2xl! hover:cursor-pointer from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>User</button></li>
-          <li><button onClick={() => router.push("/admin/login")} className='w-full font-normal! text-2xl! hover:cursor-pointer text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>Admin</button></li>
-          <li><button onClick={() => router.push("/auth/signin/staff")} className='w-full text-2xl! font-normal! hover:cursor-pointer text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>Staff </button></li>
-          <li><button onClick={() => router.push("auth/signin/staff")} className='w-full text-2xl! font-normal! hover:cursor-pointer text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2'>Doctor</button></li>
-        </ul>
-        <p className="mt-4">No account? <span onClick={() => router.push("/auth/signup")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
-        <p className="mt-4">No Account?(Staff) <span onClick={() => router.push("/auth/signup/staff")} className='text-blue-500 hover:cursor-pointer'>Sign Up</span> </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-green-100 px-4">
+      <div className="bg-white/80 backdrop-blur-lg p-8 shadow-2xl rounded-2xl w-full max-w-md">
+        <h2 className="text-3xl font-bold text-blue-700 text-center mb-6">Create Patient Account</h2>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {[
+            { id: 'firstName', label: 'First Name', required: true },
+            { id: 'lastName', label: 'Last Name', required: true },
+            { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
+            { id: 'medicalId', label: 'Medical ID', required: true },
+            { id: 'allergies', label: 'Allergies (optional)' },
+            { id: 'bloodType', label: 'Blood Type (optional)' },
+            {
+              id: 'email',
+              label: 'Email',
+              type: 'email',
+              required: true,
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: 'Invalid email format',
+              },
+            },
+            {
+              id: 'password',
+              label: 'Password',
+              type: 'password',
+              required: true,
+              minLength: {
+                value: 6,
+                message: 'Password must be at least 6 characters',
+              },
+            },
+          ].map(({ id, label, type = 'text', required, ...rest }) => (
+            <div key={id}>
+              <label htmlFor={id} className="block text-sm font-semibold text-gray-700">
+                {label}
+              </label>
+              <input
+                id={id}
+                type={type}
+                {...register(id, {
+                  required: required ? `${label} is required` : false,
+                  ...rest,
+                })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+              {errors[id] && (
+                <p className="text-red-500 text-sm">{(errors as any)[id]?.message}</p>
+              )}
+            </div>
+          ))}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isSubmitting ? 'Creating account...' : 'Sign Up'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm mt-6 text-gray-700">
+          Already have an account?{' '}
+          <span
+            onClick={() => router.push('/auth/signin')}
+            className="text-blue-600 hover:underline cursor-pointer"
+          >
+            Sign in
+          </span>
+        </p>
       </div>
     </div>
-  )
+  );
 }
-
-export default Login_check;
 

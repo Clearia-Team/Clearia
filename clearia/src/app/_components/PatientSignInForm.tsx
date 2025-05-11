@@ -1,123 +1,161 @@
-"use client";
-
-import { useState } from "react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { FcGoogle } from "react-icons/fc";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { api } from "~/trpc/react"; // adjust if your trpc hook path is different
+import { api } from "~/trpc/react"; // Adjust path if needed
 
 export function PatientSignInForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+      medicalId: "",
+    },
+  });
 
   const verifyCredentials = api.user.verifyCredentials.useMutation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
+  const onSubmit = async (data: {
+    email: string;
+    password: string;
+    medicalId: string;
+  }) => {
+    setGeneralError("");
     try {
-      // Step 1: Call your TRPC mutation to verify credentials
-      const result = await verifyCredentials.mutateAsync({ email, password });
+      const result = await verifyCredentials.mutateAsync({
+        email: data.email,
+        password: data.password,
+        medicalId: data.medicalId,
+      });
+
       if (!result.success) {
-        setError("Invalid credentials");
+        setGeneralError("Invalid credentials");
         return;
       }
 
-      // Step 2: Now authenticate via NextAuth to set session
       const authResult = await signIn("credentials", {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         redirect: false,
       });
 
       if (authResult?.ok) {
         router.push("/dashboard");
       } else {
-        setError("Failed to sign in. Please try again.");
+        setGeneralError("Failed to sign in. Please try again.");
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message ?? "An error occurred during sign in");
+        setGeneralError(err.message ?? "An error occurred during sign in");
       } else {
-        setError("An unexpected error occurred during sign in");
+        setGeneralError("An unexpected error occurred during sign in");
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleRedirectToRegister = () => {
-    router.push("/auth/register");
+  const handleGoogleLogin = async () => {
+    await signIn("google");
+    router.push("/patient-dashboard");
   };
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-lg bg-white p-6 shadow-md dark:bg-gray-800">
-      <h2 className="mb-6 text-center text-2xl font-bold text-gray-800 dark:text-white">
-        Patient Sign In
-      </h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="w-full max-w-md rounded-2xl bg-white/80 p-4 shadow-2xl backdrop-blur-lg">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+        <div>
+          <label
+            htmlFor="medicalId"
+            className="block text-sm font-semibold text-gray-700"
+          >
+            Medical ID
+          </label>
+          <input
+            id="medicalId"
+            type="text"
+            {...register("medicalId", { required: "Medical ID is required" })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-4 py-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {errors.medicalId && (
+            <p className="text-sm text-red-500">{errors.medicalId.message}</p>
+          )}
+        </div>
+
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+            className="block text-sm font-semibold text-gray-700"
           >
             Email
           </label>
           <input
             id="email"
             type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: "Invalid email format",
+              },
+            })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-4 py-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email.message}</p>
+          )}
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+            className="block text-sm font-semibold text-gray-700"
           >
             Password
           </label>
           <input
             id="password"
             type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
+            {...register("password", {
+              required: "Password is required",
+              minLength: { value: 5, message: "Minimum 5 characters" },
+            })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-4 py-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password.message}</p>
+          )}
         </div>
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          </div>
+        {generalError && (
+          <p className="text-center text-sm text-red-600">{generalError}</p>
         )}
 
         <button
           type="submit"
-          disabled={isLoading}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          disabled={isSubmitting}
+          className={`w-full rounded-md bg-blue-600 py-2 font-medium text-white transition ${
+            isSubmitting ? "cursor-not-allowed opacity-50" : "hover:bg-blue-700"
+          }`}
         >
-          {isLoading ? "Signing in..." : "Sign in"}
+          {isSubmitting ? "Logging in..." : "Login"}
         </button>
       </form>
 
-      <div className="mt-6 text-center">
-        <button
-          onClick={handleRedirectToRegister}
-          className="text-blue-600 dark:text-blue-400"
-        >
-          Contact the hospital to register
-        </button>
-      </div>
+      <div className="my-4 text-center text-gray-500">or</div>
+
+      <button
+        onClick={handleGoogleLogin}
+        className="flex w-full items-center justify-center gap-2 rounded-md border py-2 transition hover:bg-gray-100"
+      >
+        <FcGoogle size={22} />
+        <span className="text-sm font-medium">Sign in with Google</span>
+      </button>
     </div>
   );
 }
-

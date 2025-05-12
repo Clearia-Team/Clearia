@@ -80,6 +80,8 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  treatmentHistory TreatmentHistory[]
+
   
   // Add a back-reference to Patient model
   patients      Patient[]
@@ -138,6 +140,8 @@ model Treatment {
     patient     Patient       @relation(fields: [patientId], references: [id])
     doctorId    String
     doctor      User          @relation("TreatmentProvider", fields: [doctorId], references: [id])
+    history         TreatmentHistory[]
+
     
     @@index([patientId])
     @@index([doctorId])
@@ -150,4 +154,30 @@ enum TreatmentStatus {
     ONGOING
     COMPLETED
     CANCELLED
+}
+
+model TreatmentHistory {
+  id                    String    @id @default(cuid())
+  session               Int
+  date                  DateTime
+  notes                 String    @db.Text
+  progress              String    @db.Text
+  adjustments           String    @db.Text
+  sideEffects           String    @db.Text
+  prescribedMedications String?   @db.Text
+  nextReview            DateTime?
+  
+  // Relations
+  treatmentId           String
+  treatment             Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  
+  // Doctor relation - connects to the same doctor as the parent treatment
+  doctorId              String
+  doctor                User      @relation(fields: [doctorId], references: [id])
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  @@index([treatmentId])
+  @@index([doctorId])
 }

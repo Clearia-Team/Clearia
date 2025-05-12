@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -17,83 +17,62 @@ import {
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 // Types based on Prisma schema
+type TreatmentStatus = "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED";
+
 type Treatment = {
   id: string;
   name: string;
   hospital: string;
-  status: "Ongoing" | "Completed" | "Scheduled";
-  doctor: string;
-  date: string;
-  description: string;
-  nextReviewDate?: string;
+  status: TreatmentStatus;
+  doctor: {
+    name: string;
+  };
+  date: Date;
+  description?: string;
+  nextReviewDate?: Date;
   sideEffects?: string;
-  medications: string[];
+  medications?: string[];
 };
 
 type IcuAdmission = {
   id: string;
   bedNumber: number;
-  admissionDate: string;
-  dischargeDate: string | null;
-};
-
-// Define response types for our API calls
-type TreatmentsResponse = Treatment[];
-
-type IcuStatusResponse = {
-  currentAdmission: IcuAdmission | null;
+  admissionDate: Date;
+  dischargeDate: Date | null;
 };
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("treatments");
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [icuStatus, setIcuStatus] = useState<IcuAdmission | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
 
-  useEffect(() => {
-    // Check if user is authenticated
-    if (sessionStatus === "unauthenticated") {
-      router.push("/login");
+  // Use tRPC hooks to fetch data
+  const { data: treatmentsData, isLoading: treatmentsLoading } = api.treatment.getAll.useQuery(
+    undefined, // No input needed as the server will filter by the current user
+    {
+      enabled: sessionStatus === "authenticated",
     }
-  }, [sessionStatus, router]);
+  );
 
-  // Fetch treatments
-  useEffect(() => {
-    const fetchTreatments = async () => {
-      try {
-        const res = await fetch("/api/treatments");
-        if (!res.ok) throw new Error("Failed to fetch treatments");
-        const data = await res.json() as TreatmentsResponse;
-        setTreatments(data);
-      } catch (error) {
-        console.error("Error fetching treatments:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+ const { data: icuStatusData, isLoading: icuStatusLoading } = api.icuAdmission.getCurrentStatus.useQuery(
+  { patientId: session?.user?.id ?? "" },
+  {
+    enabled: sessionStatus === "authenticated" && !!session?.user?.id,
+  }
+);
 
-    const fetchIcuStatus = async () => {
-      try {
-        const res = await fetch("/api/icu-status");
-        if (!res.ok) throw new Error("Failed to fetch ICU status");
-        const data = await res.json() as IcuStatusResponse;
-        setIcuStatus(data.currentAdmission ?? null);
-      } catch (error) {
-        console.error("Error fetching ICU status:", error);
-      }
-    };
+  // Check if user is authenticated
+  if (sessionStatus === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
-    if (sessionStatus === "authenticated") {
-      void fetchTreatments();
-      void fetchIcuStatus();
-    }
-  }, [sessionStatus, activeTab]);
+  const isLoading = treatmentsLoading || icuStatusLoading || sessionStatus === "loading";
 
-  if (sessionStatus === "loading" || isLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -104,33 +83,40 @@ const UserDashboard = () => {
     );
   }
 
-  if (sessionStatus === "unauthenticated") {
-    return null; // We're redirecting in the useEffect
-  }
+  const treatments = treatmentsData ?? [];
+  const icuStatus = icuStatusData?.latestStatus ?? null;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (date: Date) => {
     const options: Intl.DateTimeFormatOptions = { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
     };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(date).toLocaleDateString(undefined, options);
   };
 
-  const getStatusBadgeClasses = (status: string) => {
+  const getStatusBadgeClasses = (status: TreatmentStatus) => {
     switch(status) {
-      case "Ongoing":
+      case "ONGOING":
         return "bg-yellow-100 text-yellow-800";
-      case "Completed":
+      case "COMPLETED":
         return "bg-green-100 text-green-800";
-      case "Scheduled":
+      case "SCHEDULED":
         return "bg-blue-100 text-blue-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
+  const getDisplayStatus = (status: TreatmentStatus) => {
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
   const renderTreatmentCard = (treatment: Treatment) => {
+    const displayStatus = getDisplayStatus(treatment.status);
+    
     return (
       <div
         key={treatment.id}
@@ -138,8 +124,8 @@ const UserDashboard = () => {
         className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
       >
         <div className={`h-2 ${
-          treatment.status === "Ongoing" ? "bg-yellow-500" : 
-          treatment.status === "Completed" ? "bg-green-500" : "bg-blue-500"
+          treatment.status === "ONGOING" ? "bg-yellow-500" : 
+          treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
         }`}></div>
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
@@ -147,16 +133,16 @@ const UserDashboard = () => {
               {treatment.name}
             </h3>
             <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusBadgeClasses(treatment.status)}`}>
-              {treatment.status}
+              {displayStatus}
             </span>
           </div>
           
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{treatment.description}</p>
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{treatment.description ?? "No description provided"}</p>
           
           <div className="border-t border-gray-100 pt-3 space-y-2">
             <div className="flex items-center text-sm text-gray-500">
               <User size={16} className="mr-2 text-blue-500" />
-              <span>Dr. {treatment.doctor.replace(/^Dr\.\s+/, '')}</span>
+              <span>Dr. {treatment.doctor.name.replace(/^Dr\.\s+/, '')}</span>
             </div>
             
             <div className="flex items-center text-sm text-gray-500">
@@ -169,7 +155,7 @@ const UserDashboard = () => {
               <span>{treatment.nextReviewDate ? `Next review: ${formatDate(treatment.nextReviewDate)}` : 'No review scheduled'}</span>
             </div>
             
-            {icuStatus && treatment.status === "Ongoing" && (
+            {icuStatus && treatment.status === "ONGOING" && (
               <div className="flex items-center text-sm text-red-600 font-medium mt-2">
                 <AlertCircle size={16} className="mr-2" />
                 <span>In ICU — Bed #{icuStatus.bedNumber}</span>
@@ -187,6 +173,8 @@ const UserDashboard = () => {
   };
 
   const renderTreatmentRow = (treatment: Treatment) => {
+    const displayStatus = getDisplayStatus(treatment.status);
+    
     return (
       <div
         key={treatment.id}
@@ -200,14 +188,14 @@ const UserDashboard = () => {
                 {treatment.name}
               </h4>
               <span className={`ml-3 px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadgeClasses(treatment.status)}`}>
-                {treatment.status}
+                {displayStatus}
               </span>
             </div>
             
             <div className="mt-1 flex items-center gap-4 text-sm">
               <span className="text-gray-500 flex items-center">
                 <User size={14} className="mr-1 text-gray-400" />
-                {treatment.doctor}
+                {treatment.doctor.name}
               </span>
               
               <span className="text-gray-500 flex items-center">
@@ -221,7 +209,7 @@ const UserDashboard = () => {
                 </span>
               )}
               
-              {icuStatus && treatment.status === "Ongoing" && (
+              {icuStatus && treatment.status === "ONGOING" && (
                 <span className="text-red-600 font-medium flex items-center">
                   <AlertCircle size={14} className="mr-1" />
                   ICU Bed #{icuStatus.bedNumber}
@@ -240,21 +228,22 @@ const UserDashboard = () => {
   };
 
   const renderContent = () => {
-    const ongoing = treatments.filter((t) => t.status === "Ongoing");
-    const scheduled = treatments.filter((t) => t.status === "Scheduled");
+    // Filter treatments by status
+    const ongoing = treatments.filter((t) => t.status === "ONGOING");
+    const scheduled = treatments.filter((t) => t.status === "SCHEDULED");
     
     // Group all treatments by hospital
     const allByHospital: Record<string, Treatment[]> = {};
     treatments.forEach((t) => {
-      if (!allByHospital[t.hospital]) allByHospital[t.hospital] = [];
+      allByHospital[t.hospital] ??= [];
       allByHospital[t.hospital].push(t);
     });
 
     // Sort treatments within each hospital (ongoing first, then by date)
     Object.keys(allByHospital).forEach(hospital => {
       allByHospital[hospital].sort((a, b) => {
-        if (a.status === "Ongoing" && b.status !== "Ongoing") return -1;
-        if (a.status !== "Ongoing" && b.status === "Ongoing") return 1;
+        if (a.status === "ONGOING" && b.status !== "ONGOING") return -1;
+        if (a.status !== "ONGOING" && b.status === "ONGOING") return 1;
         return new Date(b.date).getTime() - new Date(a.date).getTime(); // Newest first for same status
       });
     });

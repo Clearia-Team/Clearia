@@ -63,7 +63,7 @@ export const treatmentRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         // Build filter object
-        const filter = input || {};
+        const filter = input ?? {};
         
         return await ctx.db.treatment.findMany({
           where: filter,

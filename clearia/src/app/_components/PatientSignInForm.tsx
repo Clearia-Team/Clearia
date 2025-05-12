@@ -63,7 +63,7 @@ export function PatientSignInForm() {
 
   const handleGoogleLogin = async () => {
     await signIn("google");
-    router.push("/patient-dashboard");
+    router.push("/dashboard");
   };
 
   return (

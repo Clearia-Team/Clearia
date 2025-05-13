@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { PatientSignInForm } from "~/app/_components/PatientSignInForm";
+import LoginPortal from "~/app/_components/LoginPortal";
 
 export default function SignInPage() {
   const { data: session, status } = useSession();
@@ -18,28 +18,11 @@ export default function SignInPage() {
   }, [status, router]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] p-4">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-[3rem]">
-          <span className="text-[hsl(280,100%,70%)]">Clearia</span> Patient Portal
-        </h1>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-white to-green-100 px-4">
 
-        <PatientSignInForm />
+      <LoginPortal />
 
-        <div className="mt-6 flex flex-col items-center space-y-4">
-          <button
-            onClick={() => signIn("google")}
-            className="rounded bg-white px-6 py-2 text-sm font-medium text-gray-900 shadow hover:bg-gray-200"
-          >
-            Sign in with Google
-          </button>
-
-          <p className="text-sm text-white text-center">
-            Staff members please sign in through the <a href="/admin/login" className="underline">admin portal</a>.
-          </p>
-        </div>
-      </div>
-    </main>
+    </div>
   );
 }
 

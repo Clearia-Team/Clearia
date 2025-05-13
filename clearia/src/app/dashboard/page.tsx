@@ -1,152 +1,425 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
-  Dashboard,
-  Person,
-  ExitToApp,
-  MedicalServices,
-  Event,
-  History,
-} from "@mui/icons-material";
+  FileText,
+  Upload,
+  FileSearch,
+  CreditCard,
+  LogOut,
+  PlusCircle,
+  ChevronRight,
+  Calendar,
+  User,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import Link from "next/link";
+import { api } from "~/trpc/react";
 
-const DashboardPage = () => {
-  const { data: session, status } = useSession();
+// Types based on Prisma schema
+type TreatmentStatus = "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED";
 
-  const [treatments] = useState([
+type Treatment = {
+  id: string;
+  name: string;
+  hospital: string;
+  status: TreatmentStatus;
+  doctor: {
+    name: string;
+  };
+  date: Date;
+  description?: string;
+  nextReviewDate?: Date;
+  sideEffects?: string;
+  medications?: string[];
+};
+
+type IcuAdmission = {
+  id: string;
+  bedNumber: number;
+  admissionDate: Date;
+  dischargeDate: Date | null;
+};
+
+const UserDashboard = () => {
+  const [activeTab, setActiveTab] = useState("treatments");
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+
+  // Use tRPC hooks to fetch data
+  const { data: treatmentsData, isLoading: treatmentsLoading } = api.treatment.getAll.useQuery(
+    undefined, // No input needed as the server will filter by the current user
     {
-      id: 1,
-      name: "Knee Surgery",
-      status: "Ongoing",
-      doctor: "Dr. Sharma",
-      lastUpdate: "March 30, 2025",
-    },
-    {
-      id: 2,
-      name: "Diabetes Treatment",
-      status: "Completed",
-      doctor: "Dr. Mehta",
-      lastUpdate: "Jan 10, 2025",
-    },
-  ]);
+      enabled: sessionStatus === "authenticated",
+    }
+  );
 
-  const [appointments] = useState([
-    { id: 1, doctor: "Dr. Verma", date: "April 5, 2025", time: "10:00 AM" },
-    { id: 2, doctor: "Dr. Khanna", date: "April 12, 2025", time: "2:30 PM" },
-  ]);
+ const { data: icuStatusData, isLoading: icuStatusLoading } = api.icuAdmission.getCurrentStatus.useQuery(
+  { patientId: session?.user?.id ?? "" },
+  {
+    enabled: sessionStatus === "authenticated" && !!session?.user?.id,
+  }
+);
 
-  if (status === "loading") return <div>Loading...</div>;
+  // Check if user is authenticated
+  if (sessionStatus === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
-  if (status === "unauthenticated") {
+  const isLoading = treatmentsLoading || icuStatusLoading || sessionStatus === "loading";
+
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Link
-          href="/auth/signin"
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Login to continue
-        </Link>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="min-h-screen w-64 bg-blue-600 p-6 text-white">
-        <h1 className="mb-6 text-2xl font-bold">Dashboard</h1>
-        <nav className="space-y-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center space-x-2 rounded p-2 hover:bg-blue-500"
-          >
-            <Dashboard /> <span>Overview</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center space-x-2 rounded p-2 hover:bg-blue-500"
-          >
-            <Person /> <span>Profile</span>
-          </Link>
-          <button
-            onClick={() => signOut()}
-            className="flex w-full items-center space-x-2 rounded p-2 text-left hover:bg-red-500"
-          >
-            <ExitToApp /> <span>Logout</span>
-          </button>
-        </nav>
-      </aside>
+  const treatments = treatmentsData ?? [];
+  const icuStatus = icuStatusData?.latestStatus ?? null;
 
-      {/* Main Content */}
-      <div className="flex-1 p-6">
-        <h1 className="mb-6 text-3xl font-bold text-blue-600">
-          Welcome Back, {session?.user?.name ?? "User"}!
-        </h1>
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    return new Date(date).toLocaleDateString(undefined, options);
+  };
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Treatments */}
-          <div className="rounded-lg border-l-4 border-blue-500 bg-white p-4 shadow-md">
-            <h2 className="flex items-center gap-2 text-xl font-semibold">
-              <MedicalServices className="text-blue-500" /> Current Treatments
-            </h2>
-            <div className="mt-4 space-y-3">
-              {treatments.map((treatment) => (
-                <div
-                  key={treatment.id}
-                  className="rounded-md bg-gray-50 p-3 shadow-sm"
-                >
-                  <h3 className="font-semibold">{treatment.name}</h3>
-                  <p className="text-gray-600">
-                    <strong>Status:</strong> {treatment.status}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Doctor:</strong> {treatment.doctor}
-                  </p>
-                </div>
-              ))}
+  const getStatusBadgeClasses = (status: TreatmentStatus) => {
+    switch(status) {
+      case "ONGOING":
+        return "bg-yellow-100 text-yellow-800";
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "SCHEDULED":
+        return "bg-blue-100 text-blue-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getDisplayStatus = (status: TreatmentStatus) => {
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
+  const renderTreatmentCard = (treatment: Treatment) => {
+    const displayStatus = getDisplayStatus(treatment.status);
+    
+    return (
+      <div
+        key={treatment.id}
+        onClick={() => router.push(`/dashboard/treatment-details/${treatment.id}`)}
+        className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
+      >
+        <div className={`h-2 ${
+          treatment.status === "ONGOING" ? "bg-yellow-500" : 
+          treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
+        }`}></div>
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+              {treatment.name}
+            </h3>
+            <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusBadgeClasses(treatment.status)}`}>
+              {displayStatus}
+            </span>
+          </div>
+          
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{treatment.description ?? "No description provided"}</p>
+          
+          <div className="border-t border-gray-100 pt-3 space-y-2">
+            <div className="flex items-center text-sm text-gray-500">
+              <User size={16} className="mr-2 text-blue-500" />
+              <span>Dr. {treatment.doctor.name.replace(/^Dr\.\s+/, '')}</span>
+            </div>
+            
+            <div className="flex items-center text-sm text-gray-500">
+              <Calendar size={16} className="mr-2 text-blue-500" />
+              <span>{formatDate(treatment.date)}</span>
+            </div>
+            
+            <div className="flex items-center text-sm text-gray-500">
+              <Clock size={16} className="mr-2 text-blue-500" />
+              <span>{treatment.nextReviewDate ? `Next review: ${formatDate(treatment.nextReviewDate)}` : 'No review scheduled'}</span>
+            </div>
+            
+            {icuStatus && treatment.status === "ONGOING" && (
+              <div className="flex items-center text-sm text-red-600 font-medium mt-2">
+                <AlertCircle size={16} className="mr-2" />
+                <span>In ICU — Bed #{icuStatus.bedNumber}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="bg-gray-50 px-5 py-3 flex justify-between items-center border-t border-gray-100">
+          <span className="text-sm font-medium text-gray-600">{treatment.hospital}</span>
+          <ChevronRight className="text-blue-400 group-hover:text-blue-600 transition-colors" size={18} />
+        </div>
+      </div>
+    );
+  };
+
+  const renderTreatmentRow = (treatment: Treatment) => {
+    const displayStatus = getDisplayStatus(treatment.status);
+    
+    return (
+      <div
+        key={treatment.id}
+        onClick={() => router.push(`/dashboard/treatment-details/${treatment.id}`)}
+        className="bg-white border border-gray-200 p-4 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group"
+      >
+        <div className="flex justify-between items-center">
+          <div className="flex-1">
+            <div className="flex items-center">
+              <h4 className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors">
+                {treatment.name}
+              </h4>
+              <span className={`ml-3 px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadgeClasses(treatment.status)}`}>
+                {displayStatus}
+              </span>
+            </div>
+            
+            <div className="mt-1 flex items-center gap-4 text-sm">
+              <span className="text-gray-500 flex items-center">
+                <User size={14} className="mr-1 text-gray-400" />
+                {treatment.doctor.name}
+              </span>
+              
+              <span className="text-gray-500 flex items-center">
+                <Calendar size={14} className="mr-1 text-gray-400" />
+                {formatDate(treatment.date)}
+              </span>
+              
+              {treatment.medications && treatment.medications.length > 0 && (
+                <span className="text-gray-500">
+                  {treatment.medications.length} medication{treatment.medications.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              
+              {icuStatus && treatment.status === "ONGOING" && (
+                <span className="text-red-600 font-medium flex items-center">
+                  <AlertCircle size={14} className="mr-1" />
+                  ICU Bed #{icuStatus.bedNumber}
+                </span>
+              )}
             </div>
           </div>
-
-          {/* Appointments */}
-          <div className="rounded-lg border-l-4 border-green-500 bg-white p-4 shadow-md">
-            <h2 className="flex items-center gap-2 text-xl font-semibold">
-              <Event className="text-green-500" /> Upcoming Appointments
-            </h2>
-            <div className="mt-4 space-y-3">
-              {appointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="rounded-md bg-gray-50 p-3 shadow-sm"
-                >
-                  <h3 className="font-semibold">{appointment.doctor}</h3>
-                  <p className="text-gray-600">
-                    {appointment.date} - {appointment.time}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="rounded-lg border-l-4 border-purple-500 bg-white p-4 shadow-md">
-            <h2 className="flex items-center gap-2 text-xl font-semibold">
-              <History className="text-purple-500" /> Actions
-            </h2>
-            <div className="mt-4 flex flex-col space-y-3">
-              <button className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600">
-                Extract Medical History
-              </button>
-              <button className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
-                Share Treatment Details
-              </button>
-            </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">{treatment.hospital}</span>
+            <ChevronRight className="text-gray-400 group-hover:text-blue-600 transition-colors" size={16} />
           </div>
         </div>
       </div>
+    );
+  };
+
+  const renderContent = () => {
+    // Filter treatments by status
+    const ongoing = treatments.filter((t) => t.status === "ONGOING");
+    const scheduled = treatments.filter((t) => t.status === "SCHEDULED");
+    
+    // Group all treatments by hospital
+    const allByHospital: Record<string, Treatment[]> = {};
+    treatments.forEach((t) => {
+      allByHospital[t.hospital] ??= [];
+      allByHospital[t.hospital].push(t);
+    });
+
+    // Sort treatments within each hospital (ongoing first, then by date)
+    Object.keys(allByHospital).forEach(hospital => {
+      allByHospital[hospital].sort((a, b) => {
+        if (a.status === "ONGOING" && b.status !== "ONGOING") return -1;
+        if (a.status !== "ONGOING" && b.status === "ONGOING") return 1;
+        return new Date(b.date).getTime() - new Date(a.date).getTime(); // Newest first for same status
+      });
+    });
+
+    switch (activeTab) {
+      case "treatments":
+        return (
+          <div className="p-8 space-y-8 w-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">My Treatments</h1>
+                <p className="text-gray-500">Manage your medical treatments and history</p>
+              </div>
+              <button
+                onClick={() => router.push("/dashboard/new-treatment")}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+              >
+                <PlusCircle size={18} />
+                <span>New Treatment</span>
+              </button>
+            </div>
+
+            {/* Treatment Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="text-gray-500 text-sm font-medium mb-2">Total Treatments</h3>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-semibold text-gray-800">{treatments.length}</span>
+                  <span className="text-sm text-gray-500 mb-1">records</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="text-yellow-600 text-sm font-medium mb-2">Ongoing</h3>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-semibold text-gray-800">{ongoing.length}</span>
+                  <span className="text-sm text-gray-500 mb-1">treatments</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="text-blue-600 text-sm font-medium mb-2">Upcoming</h3>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-semibold text-gray-800">{scheduled.length}</span>
+                  <span className="text-sm text-gray-500 mb-1">appointments</span>
+                </div>
+              </div>
+            </div>
+
+            {ongoing.length > 0 && (
+              <section className="space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                  <h2 className="text-2xl font-semibold text-gray-800">Ongoing Treatments</h2>
+                  <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">
+                    {ongoing.length} active
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ongoing.map((treatment) => renderTreatmentCard(treatment))}
+                </div>
+              </section>
+            )}
+
+            <section className="space-y-6">
+              <div className="border-b border-gray-200 pb-2">
+                <h2 className="text-2xl font-semibold text-gray-800">All Treatments</h2>
+              </div>
+              
+              {Object.keys(allByHospital).length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                  <p className="text-gray-500">No treatments found.</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {Object.keys(allByHospital).map((hospital) => (
+                    <div key={hospital} className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <h3 className="text-xl font-medium text-gray-800">{hospital}</h3>
+                      </div>
+                      <div className="space-y-2 pl-6">
+                        {allByHospital[hospital].map((treatment) => renderTreatmentRow(treatment))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        );
+      case "plans":
+        return (
+          <div className="p-8 w-full">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Health Plans</h2>
+            <p className="text-gray-500 mb-6">Manage your subscription and package options</p>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <p className="text-gray-600">Premium health plan features coming soon</p>
+            </div>
+          </div>
+        );
+      case "upload":
+        return (
+          <div className="p-8 w-full">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Upload Medical Records</h2>
+            <p className="text-gray-500 mb-6">Securely upload your medical documents</p>
+            <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-300 transition-colors cursor-pointer">
+              <Upload className="mx-auto text-gray-400 mb-3" size={40} />
+              <h3 className="text-lg font-medium text-gray-700">Drag and drop files here</h3>
+              <p className="text-gray-500 mt-1">or click to browse your device</p>
+              <p className="text-sm text-gray-400 mt-3">Supports PDF, JPG, PNG (Max 25MB)</p>
+            </div>
+          </div>
+        );
+      case "extract":
+        return (
+          <div className="p-8 w-full">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Medical History Summary</h2>
+            <p className="text-gray-500 mb-6">Key information extracted from your records</p>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 text-gray-500">
+                <FileSearch className="text-blue-400" />
+                <p>Upload medical documents to generate your health summary</p>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const menuItems = [
+    { id: "treatments", label: "Treatments", icon: FileText },
+    { id: "upload", label: "Upload History", icon: Upload },
+    { id: "extract", label: "Extract History", icon: FileSearch },
+    { id: "plans", label: "Health Plans", icon: CreditCard }
+  ];
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="w-64 bg-blue-700 text-white p-6 flex flex-col fixed h-full justify-between">
+        <div>
+          <div className="mb-8">
+            <h1 className="text-xl font-bold text-white">Dashboard</h1>
+            <p className="text-sm text-blue-200">Patient Portal</p>
+          </div>
+          <nav className="space-y-1">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors ${
+                  activeTab === item.id
+                    ? "bg-blue-600/90 text-white font-medium"
+                    : "text-blue-100 hover:bg-blue-600/50"
+                }`}
+              >
+                <item.icon size={18} className={activeTab === item.id ? "text-white" : "text-blue-200"} />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="mt-auto pt-4 border-t border-blue-600">
+          <Link
+            href="/api/auth/signout"
+            className="flex items-center gap-3 p-3 rounded-lg text-blue-100 hover:bg-red-500/90 hover:text-white transition-colors"
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </Link>
+        </div>
+      </aside>
+
+      <main className="flex-1 ml-64 overflow-y-auto">{renderContent()}</main>
     </div>
   );
 };
 
-export default DashboardPage;
+export default UserDashboard;

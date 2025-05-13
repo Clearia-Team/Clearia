@@ -88,4 +88,23 @@ export const patientRouter = createTRPCRouter({
         where: { id: input.id },
       });
     }),
+
+  getIcuAdmissionIdByPatientId: publicProcedure
+    .input(z.object({ patientId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const admission = await ctx.db.icuAdmission.findFirst({
+        where: {
+          patientId: input.patientId,
+          dischargeDate: null, // Optional: if you only want active ICU admissions
+        },
+        orderBy: {
+          admissionDate: "desc",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return admission; // will return { id: string } | null
+    }),
 });

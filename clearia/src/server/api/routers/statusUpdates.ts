@@ -108,33 +108,60 @@ export const statusUpdateRouter = createTRPCRouter({
     }),
 
   getStatusCounts: publicProcedure
-    .input(z.object({
-      startDate: z.date().optional(),
-      endDate: z.date().optional()
-    }).optional())
+    .input(
+      z
+        .object({
+          startDate: z.date().optional(),
+          endDate: z.date().optional(),
+        })
+        .optional(),
+    )
     .query(async ({ ctx, input }) => {
-      const dateFilter = input ? {
-        timestamp: {
-          ...(input.startDate ? { gte: input.startDate } : {}),
-          ...(input.endDate ? { lte: input.endDate } : {}),
-        }
-      } : {};
+      const dateFilter = input
+        ? {
+            timestamp: {
+              ...(input.startDate ? { gte: input.startDate } : {}),
+              ...(input.endDate ? { lte: input.endDate } : {}),
+            },
+          }
+        : {};
 
       const statuses = Object.values(PatientStatus);
       const counts = await Promise.all(
-        statuses.map(status =>
+        statuses.map((status) =>
           ctx.db.statusUpdate.count({
             where: {
               status,
-              ...dateFilter
-            }
-          })
-        )
+              ...dateFilter,
+            },
+          }),
+        ),
       );
 
-      return statuses.reduce((acc, status, index) => {
-        acc[status] = counts[index] ?? 0;
-        return acc;
-      }, {} as Record<PatientStatus, number>);
+      return statuses.reduce(
+        (acc, status, index) => {
+          acc[status] = counts[index] ?? 0;
+          return acc;
+        },
+        {} as Record<PatientStatus, number>,
+      );
+    }),
+
+  getCurrentStatusByAdmissionId: publicProcedure
+    .input(z.object({ icuAdmissionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const latest = await ctx.db.statusUpdate.findFirst({
+        where: { icuAdmissionId: input.icuAdmissionId },
+        select: {
+          status: true,
+          timestamp: true,
+          staffId: true,
+        },
+        orderBy: {
+          timestamp: "desc",
+        },
+      });
+
+      return latest;
     }),
 });

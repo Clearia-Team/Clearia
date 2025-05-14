@@ -14,7 +14,8 @@ import {
   Calendar,
   User,
   Clock,
-  AlertCircle
+  AlertCircle,
+  BriefcaseMedical
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "~/trpc/react";
@@ -368,6 +369,48 @@ const UserDashboard = () => {
             </div>
           </div>
         );
+       
+        case "recommendation":
+  return (
+    <div className="p-8 w-full">
+      <h2 className="text-3xl font-bold text-gray-800 mb-2">Doctor Recommendations</h2>
+      <p className="text-gray-500 mb-6">Enter your symptoms to get doctor suggestions from <b>Indra Gandhi Medical College (IGMC), Shimla</b>.</p>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
+        {/* Symptom Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Your Symptoms</label>
+          <input
+            type="text"
+            placeholder="e.g., fever, headache"
+            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div>
+          <button
+            className="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition"
+            onClick={() => {
+              // Trigger symptom processing function here
+              // Example: handleSymptomSubmit()
+            }}
+          >
+            Get Recommendations
+          </button>
+        </div>
+
+        {/* Result Section */}
+        <div className="border-t pt-4">
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Recommendations</h3>
+          <p className="text-gray-500">You'll see a list of relevant doctors here based on your symptoms. For better results please enter at least 4 symptoms</p>
+          {/* Map the result here once available */}
+        </div>
+      </div>
+    </div>
+  );
+
+
       default:
         return null;
     }
@@ -377,7 +420,8 @@ const UserDashboard = () => {
     { id: "treatments", label: "Treatments", icon: FileText },
     { id: "upload", label: "Upload History", icon: Upload },
     { id: "extract", label: "Extract History", icon: FileSearch },
-    { id: "plans", label: "Health Plans", icon: CreditCard }
+    { id: "plans", label: "Health Plans", icon: CreditCard },
+    { id: "recommendation", label : "Search for a Doctor", icon : BriefcaseMedical }
   ];
 
   return (

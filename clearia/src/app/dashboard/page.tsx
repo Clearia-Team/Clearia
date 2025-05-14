@@ -49,6 +49,9 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("treatments");
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
+  const [symptoms, setSymptoms] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const recommendMutation = api.doctorRecommendation.recommend.useMutation();
 
   // Use tRPC hooks to fetch data
   const { data: treatmentsData, isLoading: treatmentsLoading } = api.treatment.getAll.useQuery(
@@ -58,12 +61,12 @@ const UserDashboard = () => {
     }
   );
 
- const { data: icuStatusData, isLoading: icuStatusLoading } = api.icuAdmission.getCurrentStatus.useQuery(
-  { patientId: session?.user?.id ?? "" },
-  {
-    enabled: sessionStatus === "authenticated" && !!session?.user?.id,
-  }
-);
+  const { data: icuStatusData, isLoading: icuStatusLoading } = api.icuAdmission.getCurrentStatus.useQuery(
+    { patientId: session?.user?.id ?? "" },
+    {
+      enabled: sessionStatus === "authenticated" && !!session?.user?.id,
+    }
+  );
 
   // Check if user is authenticated
   if (sessionStatus === "unauthenticated") {
@@ -88,16 +91,16 @@ const UserDashboard = () => {
   const icuStatus = icuStatusData?.latestStatus ?? null;
 
   const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     };
     return new Date(date).toLocaleDateString(undefined, options);
   };
 
   const getStatusBadgeClasses = (status: TreatmentStatus) => {
-    switch(status) {
+    switch (status) {
       case "ONGOING":
         return "bg-yellow-100 text-yellow-800";
       case "COMPLETED":
@@ -117,17 +120,16 @@ const UserDashboard = () => {
 
   const renderTreatmentCard = (treatment: Treatment) => {
     const displayStatus = getDisplayStatus(treatment.status);
-    
+
     return (
       <div
         key={treatment.id}
         onClick={() => router.push(`/dashboard/treatment-details/${treatment.id}`)}
         className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
       >
-        <div className={`h-2 ${
-          treatment.status === "ONGOING" ? "bg-yellow-500" : 
-          treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
-        }`}></div>
+        <div className={`h-2 ${treatment.status === "ONGOING" ? "bg-yellow-500" :
+            treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
+          }`}></div>
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
             <h3 className="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
@@ -137,25 +139,25 @@ const UserDashboard = () => {
               {displayStatus}
             </span>
           </div>
-          
+
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{treatment.description ?? "No description provided"}</p>
-          
+
           <div className="border-t border-gray-100 pt-3 space-y-2">
             <div className="flex items-center text-sm text-gray-500">
               <User size={16} className="mr-2 text-blue-500" />
               <span>Dr. {treatment.doctor.name.replace(/^Dr\.\s+/, '')}</span>
             </div>
-            
+
             <div className="flex items-center text-sm text-gray-500">
               <Calendar size={16} className="mr-2 text-blue-500" />
               <span>{formatDate(treatment.date)}</span>
             </div>
-            
+
             <div className="flex items-center text-sm text-gray-500">
               <Clock size={16} className="mr-2 text-blue-500" />
               <span>{treatment.nextReviewDate ? `Next review: ${formatDate(treatment.nextReviewDate)}` : 'No review scheduled'}</span>
             </div>
-            
+
             {icuStatus && treatment.status === "ONGOING" && (
               <div className="flex items-center text-sm text-red-600 font-medium mt-2">
                 <AlertCircle size={16} className="mr-2" />
@@ -164,7 +166,7 @@ const UserDashboard = () => {
             )}
           </div>
         </div>
-        
+
         <div className="bg-gray-50 px-5 py-3 flex justify-between items-center border-t border-gray-100">
           <span className="text-sm font-medium text-gray-600">{treatment.hospital}</span>
           <ChevronRight className="text-blue-400 group-hover:text-blue-600 transition-colors" size={18} />
@@ -175,7 +177,7 @@ const UserDashboard = () => {
 
   const renderTreatmentRow = (treatment: Treatment) => {
     const displayStatus = getDisplayStatus(treatment.status);
-    
+
     return (
       <div
         key={treatment.id}
@@ -192,24 +194,24 @@ const UserDashboard = () => {
                 {displayStatus}
               </span>
             </div>
-            
+
             <div className="mt-1 flex items-center gap-4 text-sm">
               <span className="text-gray-500 flex items-center">
                 <User size={14} className="mr-1 text-gray-400" />
                 {treatment.doctor.name}
               </span>
-              
+
               <span className="text-gray-500 flex items-center">
                 <Calendar size={14} className="mr-1 text-gray-400" />
                 {formatDate(treatment.date)}
               </span>
-              
+
               {treatment.medications && treatment.medications.length > 0 && (
                 <span className="text-gray-500">
                   {treatment.medications.length} medication{treatment.medications.length !== 1 ? 's' : ''}
                 </span>
               )}
-              
+
               {icuStatus && treatment.status === "ONGOING" && (
                 <span className="text-red-600 font-medium flex items-center">
                   <AlertCircle size={14} className="mr-1" />
@@ -218,7 +220,7 @@ const UserDashboard = () => {
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">{treatment.hospital}</span>
             <ChevronRight className="text-gray-400 group-hover:text-blue-600 transition-colors" size={16} />
@@ -232,7 +234,7 @@ const UserDashboard = () => {
     // Filter treatments by status
     const ongoing = treatments.filter((t) => t.status === "ONGOING");
     const scheduled = treatments.filter((t) => t.status === "SCHEDULED");
-    
+
     // Group all treatments by hospital
     const allByHospital: Record<string, Treatment[]> = {};
     treatments.forEach((t) => {
@@ -310,7 +312,7 @@ const UserDashboard = () => {
               <div className="border-b border-gray-200 pb-2">
                 <h2 className="text-2xl font-semibold text-gray-800">All Treatments</h2>
               </div>
-              
+
               {Object.keys(allByHospital).length === 0 ? (
                 <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
                   <p className="text-gray-500">No treatments found.</p>
@@ -369,48 +371,107 @@ const UserDashboard = () => {
             </div>
           </div>
         );
-       
-        case "recommendation":
-  return (
-    <div className="p-8 w-full">
-      <h2 className="text-3xl font-bold text-gray-800 mb-2">Doctor Recommendations</h2>
-      <p className="text-gray-500 mb-6">Enter your symptoms to get doctor suggestions from <b>Indra Gandhi Medical College (IGMC), Shimla</b>.</p>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
-        {/* Symptom Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Your Symptoms</label>
-          <input
-            type="text"
-            placeholder="e.g., fever, headache"
-            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
 
-        {/* Submit Button */}
-        <div>
-          <button
-            className="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition"
-            onClick={() => {
-              // Trigger symptom processing function here
-              // Example: handleSymptomSubmit()
-            }}
-          >
-            Get Recommendations
-          </button>
-        </div>
+      case "recommendation":
 
-        {/* Result Section */}
-        <div className="border-t pt-4">
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Recommendations</h3>
-          <p className="text-gray-500">You'll see a list of relevant doctors here based on your symptoms. For better results please enter at least 4 symptoms</p>
-          {/* Map the result here once available */}
-        </div>
-      </div>
+
+        return (
+          <div className="p-8 w-full">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Doctor Recommendations</h2>
+            <p className="text-gray-500 mb-6">
+              Enter your symptoms to get doctor suggestions from <b>Indra Gandhi Medical College (IGMC), Shimla</b>.
+            </p>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
+              {/* Symptom Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Your Symptoms</label>
+                <input
+                  type="text"
+                  placeholder="e.g., sharp abdominal pain, vomiting, nausea, peripheral edema"
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              {/* Submit Button */}
+              <div>
+                <button
+                  className="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition"
+                  onClick={() => {
+                    setSubmitted(true);
+                    recommendMutation.mutate({ symptoms }); // <-- This triggers the tRPC mutation, which calls your backend API
+                  }}
+                  disabled={recommendMutation.isLoading}
+                >
+                  {recommendMutation.isLoading ? "Loading..." : "Get Recommendations"}
+                </button>
+              </div>
+              {/* Result Section */}
+              {/* Result Section */}
+<div className="border-t pt-4">
+  <h3 className="text-xl font-semibold text-gray-800 mb-2">Recommendations</h3>
+  {!submitted && (
+    <p className="text-gray-500">
+      You'll see a list of relevant doctors here based on your symptoms. For better results please enter at least 4 symptoms
+    </p>
+  )}
+  {recommendMutation.error && (
+    <p className="text-red-500 mt-2">{recommendMutation.error.message}</p>
+  )}
+
+  {/* Show predicted disease */}
+  {recommendMutation.data?.predicted_disease && (
+    <div className="mb-4">
+      <span className="font-medium text-gray-700">Predicted Disease: </span>
+      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+        {recommendMutation.data.predicted_disease}
+      </span>
     </div>
-  );
+  )}
 
+  {/* Show doctor table */}
+  {recommendMutation.data?.doctors && recommendMutation.data.doctors.length > 0 && (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+        <thead>
+          <tr>
+            <th className="px-4 py-2 border-b text-left text-gray-700">Name</th>
+            <th className="px-4 py-2 border-b text-left text-gray-700">Designation</th>
+            <th className="px-4 py-2 border-b text-left text-gray-700">Department</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recommendMutation.data.doctors.map((doc: any, idx: number) => (
+            <tr key={idx} className="hover:bg-blue-50">
+              <td className="px-4 py-2 border-b font-medium text-gray-900">{doc.Name}</td>
+              <td className="px-4 py-2 border-b text-gray-700">{doc.Designation}</td>
+              <td className="px-4 py-2 border-b text-gray-700">{doc.Department}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
 
+  {/* Optionally, show debug info in a collapsible section */}
+  {recommendMutation.data?.debug_info && (
+    <details className="mt-4">
+      <summary className="cursor-pointer text-blue-600 underline">Show Debug Info</summary>
+      <pre className="bg-gray-100 p-3 rounded mt-2 text-xs overflow-x-auto">
+        {JSON.stringify(recommendMutation.data.debug_info, null, 2)}
+      </pre>
+    </details>
+  )}
+
+  {/* No doctors found */}
+  {recommendMutation.data && (!recommendMutation.data.doctors || recommendMutation.data.doctors.length === 0) && (
+    <p className="text-gray-500 mt-2">No doctors found for the given symptoms.</p>
+  )}
+</div>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -421,7 +482,7 @@ const UserDashboard = () => {
     { id: "upload", label: "Upload History", icon: Upload },
     { id: "extract", label: "Extract History", icon: FileSearch },
     { id: "plans", label: "Health Plans", icon: CreditCard },
-    { id: "recommendation", label : "Search for a Doctor", icon : BriefcaseMedical }
+    { id: "recommendation", label: "Search for a Doctor", icon: BriefcaseMedical }
   ];
 
   return (
@@ -437,11 +498,10 @@ const UserDashboard = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors ${
-                  activeTab === item.id
+                className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors ${activeTab === item.id
                     ? "bg-blue-600/90 text-white font-medium"
                     : "text-blue-100 hover:bg-blue-600/50"
-                }`}
+                  }`}
               >
                 <item.icon size={18} className={activeTab === item.id ? "text-white" : "text-blue-200"} />
                 <span>{item.label}</span>

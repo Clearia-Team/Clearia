@@ -1,3 +1,5 @@
+import { doctorRecommendationRouter } from "./routers/doctorRecommendation";
+
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { userRouter } from "./routers/user";
 import { patientRouter } from "./routers/patient";
@@ -18,6 +20,7 @@ export const appRouter = createTRPCRouter({
   statusUpdate: statusUpdateRouter,
   treatment: treatmentRouter,
   treatmentHistory: treatmentHistoryRouter,
+  doctorRecommendation: doctorRecommendationRouter, // <-- add this line
 });
 
 // export type definition of API

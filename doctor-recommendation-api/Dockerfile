@@ -3,9 +3,11 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install required system dependencies
+# Install required system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
+    bc \ 
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -30,7 +32,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8080/ || exit 1
+  CMD ["sh", "/app/healthcheck.sh"]
 
 # Run the application
 CMD ["python", "main.py"]

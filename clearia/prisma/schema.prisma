@@ -8,7 +8,6 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 //can be a Doctor or a nurse or ADMIN
-
 model Account {
     id                 String  @id @default(cuid())
     userId             String
@@ -31,9 +30,7 @@ model Session {
     sessionToken String   @unique
     userId       String
     expires      DateTime
-
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
     @@index([userId])
 }
 model VerificationToken {
@@ -59,15 +56,14 @@ model Patient {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   icuAdmissions IcuAdmission[]
+  treatments    Treatment[]    // Add relation to treatments
   
   // Relation to User
   userId        String         @unique
   user          User           @relation(fields: [userId], references: [id])
-
   @@index([medicalId])
   @@index([lastName])
 }
-
 model User {
   id            String         @id @default(uuid())
   name          String
@@ -78,19 +74,19 @@ model User {
   updatedAt     DateTime       @updatedAt
   icuAdmissions IcuAdmission[] @relation("AdmittingStaff")
   statusUpdates StatusUpdate[] @relation("UpdatingStaff")
-
+  treatments    Treatment[]    @relation("TreatmentProvider") // Add relation to treatments
   // NextAuth fields
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
+  treatmentHistory TreatmentHistory[]
+
   
   // Add a back-reference to Patient model
-  patients      Patient[]      // <-- Add this line
-
+  patients      Patient[]
   @@index([email])
 }
-
 model IcuAdmission {
     id            String         @id @default(uuid())
     patientId     String
@@ -127,4 +123,61 @@ enum PatientStatus {
     IMPROVING
     RECOVERED
     DECEASED
+}
+
+// New Treatment model to store treatment data
+model Treatment {
+    id          String        @id @default(uuid())
+    name        String
+    date        DateTime
+    hospital    String
+    status      TreatmentStatus @default(ONGOING)
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+    
+    // Relations
+    patientId   String
+    patient     Patient       @relation(fields: [patientId], references: [id])
+    doctorId    String
+    doctor      User          @relation("TreatmentProvider", fields: [doctorId], references: [id])
+    history         TreatmentHistory[]
+
+    
+    @@index([patientId])
+    @@index([doctorId])
+    @@index([date])
+}
+
+// Treatment status enum
+enum TreatmentStatus {
+    SCHEDULED
+    ONGOING
+    COMPLETED
+    CANCELLED
+}
+
+model TreatmentHistory {
+  id                    String    @id @default(cuid())
+  session               Int
+  date                  DateTime
+  notes                 String    @db.Text
+  progress              String    @db.Text
+  adjustments           String    @db.Text
+  sideEffects           String    @db.Text
+  prescribedMedications String?   @db.Text
+  nextReview            DateTime?
+  
+  // Relations
+  treatmentId           String
+  treatment             Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  
+  // Doctor relation - connects to the same doctor as the parent treatment
+  doctorId              String
+  doctor                User      @relation(fields: [doctorId], references: [id])
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  @@index([treatmentId])
+  @@index([doctorId])
 }

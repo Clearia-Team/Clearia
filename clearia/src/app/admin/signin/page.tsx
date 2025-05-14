@@ -98,7 +98,7 @@ const Adminlogin = () => {
       <p className="mt-4">
         Don't have an account?{" "}
         <span
-          onClick={() => router.push("/register")}
+          onClick={() => router.push("/auth/signup")}
           className="text-blue-500 hover:cursor-pointer"
         >
           Register

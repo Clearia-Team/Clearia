@@ -53,11 +53,13 @@ const UserDashboard = () => {
   const [submitted, setSubmitted] = useState(false);
   const recommendMutation = api.doctorRecommendation.recommend.useMutation();
 
-  // Use tRPC hooks to fetch data
-  const { data: treatmentsData, isLoading: treatmentsLoading } = api.treatment.getAll.useQuery(
-    undefined, // No input needed as the server will filter by the current user
+  // Use tRPC hooks to fetch data with user ID from session
+  const { data: treatmentsData, isLoading: treatmentsLoading } = api.treatment.getUserTreatments.useQuery(
     {
-      enabled: sessionStatus === "authenticated",
+      userId: session?.user?.id ?? "",
+    },
+    {
+      enabled: sessionStatus === "authenticated" && !!session?.user?.id,
     }
   );
 
@@ -374,8 +376,6 @@ const UserDashboard = () => {
 
 
       case "recommendation":
-
-
         return (
           <div className="p-8 w-full">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Doctor Recommendations</h2>
@@ -400,7 +400,7 @@ const UserDashboard = () => {
                   className="bg-blue-500 text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition"
                   onClick={() => {
                     setSubmitted(true);
-                    recommendMutation.mutate({ symptoms }); // <-- This triggers the tRPC mutation, which calls your backend API
+                    recommendMutation.mutate({ symptoms });
                   }}
                   disabled={recommendMutation.isLoading}
                 >
@@ -408,67 +408,66 @@ const UserDashboard = () => {
                 </button>
               </div>
               {/* Result Section */}
-              {/* Result Section */}
-<div className="border-t pt-4">
-  <h3 className="text-xl font-semibold text-gray-800 mb-2">Recommendations</h3>
-  {!submitted && (
-    <p className="text-gray-500">
-      You'll see a list of relevant doctors here based on your symptoms. For better results please enter at least 4 symptoms
-    </p>
-  )}
-  {recommendMutation.error && (
-    <p className="text-red-500 mt-2">{recommendMutation.error.message}</p>
-  )}
+              <div className="border-t pt-4">
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Recommendations</h3>
+                {!submitted && (
+                  <p className="text-gray-500">
+                    You'll see a list of relevant doctors here based on your symptoms. For better results please enter at least 4 symptoms
+                  </p>
+                )}
+                {recommendMutation.error && (
+                  <p className="text-red-500 mt-2">{recommendMutation.error.message}</p>
+                )}
 
-  {/* Show predicted disease */}
-  {recommendMutation.data?.predicted_disease && (
-    <div className="mb-4">
-      <span className="font-medium text-gray-700">Predicted Disease: </span>
-      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
-        {recommendMutation.data.predicted_disease}
-      </span>
-    </div>
-  )}
+                {/* Show predicted disease */}
+                {recommendMutation.data?.predicted_disease && (
+                  <div className="mb-4">
+                    <span className="font-medium text-gray-700">Predicted Disease: </span>
+                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+                      {recommendMutation.data.predicted_disease}
+                    </span>
+                  </div>
+                )}
 
-  {/* Show doctor table */}
-  {recommendMutation.data?.doctors && recommendMutation.data.doctors.length > 0 && (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-        <thead>
-          <tr>
-            <th className="px-4 py-2 border-b text-left text-gray-700">Name</th>
-            <th className="px-4 py-2 border-b text-left text-gray-700">Designation</th>
-            <th className="px-4 py-2 border-b text-left text-gray-700">Department</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recommendMutation.data.doctors.map((doc: any, idx: number) => (
-            <tr key={idx} className="hover:bg-blue-50">
-              <td className="px-4 py-2 border-b font-medium text-gray-900">{doc.Name}</td>
-              <td className="px-4 py-2 border-b text-gray-700">{doc.Designation}</td>
-              <td className="px-4 py-2 border-b text-gray-700">{doc.Department}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
+                {/* Show doctor table */}
+                {recommendMutation.data?.doctors && recommendMutation.data.doctors.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 border-b text-left text-gray-700">Name</th>
+                          <th className="px-4 py-2 border-b text-left text-gray-700">Designation</th>
+                          <th className="px-4 py-2 border-b text-left text-gray-700">Department</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recommendMutation.data.doctors.map((doc: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-blue-50">
+                            <td className="px-4 py-2 border-b font-medium text-gray-900">{doc.Name}</td>
+                            <td className="px-4 py-2 border-b text-gray-700">{doc.Designation}</td>
+                            <td className="px-4 py-2 border-b text-gray-700">{doc.Department}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-  {/* Optionally, show debug info in a collapsible section */}
-  {recommendMutation.data?.debug_info && (
-    <details className="mt-4">
-      <summary className="cursor-pointer text-blue-600 underline">Show Debug Info</summary>
-      <pre className="bg-gray-100 p-3 rounded mt-2 text-xs overflow-x-auto">
-        {JSON.stringify(recommendMutation.data.debug_info, null, 2)}
-      </pre>
-    </details>
-  )}
+                {/* Optionally, show debug info in a collapsible section */}
+                {recommendMutation.data?.debug_info && (
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-blue-600 underline">Show Debug Info</summary>
+                    <pre className="bg-gray-100 p-3 rounded mt-2 text-xs overflow-x-auto">
+                      {JSON.stringify(recommendMutation.data.debug_info, null, 2)}
+                    </pre>
+                  </details>
+                )}
 
-  {/* No doctors found */}
-  {recommendMutation.data && (!recommendMutation.data.doctors || recommendMutation.data.doctors.length === 0) && (
-    <p className="text-gray-500 mt-2">No doctors found for the given symptoms.</p>
-  )}
-</div>
+                {/* No doctors found */}
+                {recommendMutation.data && (!recommendMutation.data.doctors || recommendMutation.data.doctors.length === 0) && (
+                  <p className="text-gray-500 mt-2">No doctors found for the given symptoms.</p>
+                )}
+              </div>
             </div>
           </div>
         );

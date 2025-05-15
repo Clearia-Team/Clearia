@@ -140,36 +140,68 @@ export const treatmentRouter = createTRPCRouter({
       }
     }),
 
-  // Update treatment status
-  updateStatus: publicProcedure
-    .input(z.object({
-      id: z.string(),
-      status: z.nativeEnum(TreatmentStatus)
-    }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const treatment = await ctx.db.treatment.update({
-          where: { id: input.id },
-          data: { status: input.status },
-        });
+ // Get all treatments for the current user
+  getUserTreatments: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // First, find the Patient record associated with the user
+      const patient = await ctx.db.patient.findUnique({
+        where: {
+          userId: input.userId,
+        },
+      });
 
-        return {
-          success: true,
-          treatment,
-        };
-      } catch (error) {
-        if (error.code === "P2025") {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Treatment not found",
-          });
-        }
-        
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to update treatment status",
-          cause: error,
-        });
+      if (!patient) {
+        return [];
       }
+
+      // Then get all treatments for this patient
+      const treatments = await ctx.db.treatment.findMany({
+        where: {
+          patientId: patient.id,
+        },
+        include: {
+          doctor: {
+            select: {
+              name: true,
+            },
+          },
+          history: {
+            orderBy: {
+              date: "desc",
+            },
+            take: 1, // Get the most recent history record
+          },
+        },
+        orderBy: {
+          updatedAt: "desc", // Most recent first
+        },
+      });
+
+      // Transform the data to match the expected format in the frontend
+      return treatments.map((treatment) => {
+        const latestHistory = treatment.history[0];
+        
+        return {
+          id: treatment.id,
+          name: treatment.name,
+          hospital: treatment.hospital,
+          status: treatment.status,
+          doctor: {
+            name: treatment.doctor.name,
+          },
+          date: treatment.date,
+          description: latestHistory?.notes || undefined,
+          nextReviewDate: latestHistory?.nextReview || undefined,
+          sideEffects: latestHistory?.sideEffects || undefined,
+          medications: latestHistory?.prescribedMedications 
+            ? latestHistory.prescribedMedications.split(',').map(med => med.trim())
+            : [],
+        };
+      });
     }),
 });

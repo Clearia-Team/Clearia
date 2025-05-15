@@ -41,7 +41,7 @@ const LoginPortal: React.FC = () => {
         <p className="mt-6 text-sm text-gray-700 text-center">
           Don&apos;t have an account?{' '}
           <span
-            onClick={() => router.push('/register')}
+            onClick={() => router.push('/auth/register')}
             className="text-blue-600 font-medium underline underline-offset-2 cursor-pointer hover:text-blue-800 transition"
           >
             Register

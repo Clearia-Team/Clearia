@@ -10,14 +10,37 @@ const createTreatmentSchema = z.object({
   date: z.string().transform((str) => new Date(str)),
   patientId: z.string().uuid({ message: "Valid patient ID is required" }),
   doctorId: z.string().uuid({ message: "Valid doctor ID is required" }),
-  status: z.nativeEnum(TreatmentStatus).default("ONGOING")
+  status: z.nativeEnum(TreatmentStatus).default("ONGOING"),
+});
+
+// Schema for treatment update validation
+const updateTreatmentSchema = z.object({
+  id: z.string().uuid({ message: "Valid treatment ID is required" }),
+  name: z.string().min(1, { message: "Treatment name is required" }).optional(),
+  hospital: z
+    .string()
+    .min(1, { message: "Hospital name is required" })
+    .optional(),
+  date: z
+    .string()
+    .transform((str) => new Date(str))
+    .optional(),
+  patientId: z
+    .string()
+    .uuid({ message: "Valid patient ID is required" })
+    .optional(),
+  doctorId: z
+    .string()
+    .uuid({ message: "Valid doctor ID is required" })
+    .optional(),
+  status: z.nativeEnum(TreatmentStatus).optional(),
 });
 
 // Optional filter schema for fetching treatments
 const treatmentFilterSchema = z.object({
   patientId: z.string().optional(),
   doctorId: z.string().optional(),
-  status: z.nativeEnum(TreatmentStatus).optional()
+  status: z.nativeEnum(TreatmentStatus).optional(),
 });
 
 export const treatmentRouter = createTRPCRouter({
@@ -48,10 +71,65 @@ export const treatmentRouter = createTRPCRouter({
             message: "Invalid patient or doctor ID",
           });
         }
-        
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create treatment",
+          cause: error,
+        });
+      }
+    }),
+
+  // Update a treatment
+  update: publicProcedure
+    .input(updateTreatmentSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { id, ...updateData } = input;
+
+        const treatment = await ctx.db.treatment.update({
+          where: { id },
+          data: updateData,
+          include: {
+            patient: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                medicalId: true,
+              },
+            },
+            doctor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        return {
+          success: true,
+          treatment,
+        };
+      } catch (error) {
+        if (error.code === "P2025") {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Treatment not found",
+          });
+        }
+
+        if (error.code === "P2003") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid patient or doctor ID",
+          });
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update treatment",
           cause: error,
         });
       }
@@ -64,7 +142,7 @@ export const treatmentRouter = createTRPCRouter({
       try {
         // Build filter object
         const filter = input ?? {};
-        
+
         return await ctx.db.treatment.findMany({
           where: filter,
           include: {
@@ -97,55 +175,53 @@ export const treatmentRouter = createTRPCRouter({
     }),
 
   // Get treatment by ID
-  getById: publicProcedure
-    .input(z.string())
-    .query(async ({ ctx, input }) => {
-      try {
-        const treatment = await ctx.db.treatment.findUnique({
-          where: { id: input },
-          include: {
-            patient: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                medicalId: true,
-              },
-            },
-            doctor: {
-              select: {
-                id: true,
-                name: true,
-              },
+  getById: publicProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    try {
+      const treatment = await ctx.db.treatment.findUnique({
+        where: { id: input },
+        include: {
+          patient: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              medicalId: true,
             },
           },
-        });
+          doctor: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
 
-        if (!treatment) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Treatment not found",
-          });
-        }
-
-        return treatment;
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        
+      if (!treatment) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch treatment",
-          cause: error,
+          code: "NOT_FOUND",
+          message: "Treatment not found",
         });
       }
-    }),
 
- // Get all treatments for the current user
+      return treatment;
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch treatment",
+        cause: error,
+      });
+    }
+  }),
+
+  // Get all treatments for the current user
   getUserTreatments: publicProcedure
     .input(
       z.object({
         userId: z.string(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       // First, find the Patient record associated with the user
@@ -185,7 +261,7 @@ export const treatmentRouter = createTRPCRouter({
       // Transform the data to match the expected format in the frontend
       return treatments.map((treatment) => {
         const latestHistory = treatment.history[0];
-        
+
         return {
           id: treatment.id,
           name: treatment.name,
@@ -198,10 +274,20 @@ export const treatmentRouter = createTRPCRouter({
           description: latestHistory?.notes || undefined,
           nextReviewDate: latestHistory?.nextReview || undefined,
           sideEffects: latestHistory?.sideEffects || undefined,
-          medications: latestHistory?.prescribedMedications 
-            ? latestHistory.prescribedMedications.split(',').map(med => med.trim())
+          medications: latestHistory?.prescribedMedications
+            ? latestHistory.prescribedMedications
+                .split(",")
+                .map((med) => med.trim())
             : [],
         };
+      });
+    }),
+
+  delete: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.treatment.delete({
+        where: { id: input.id },
       });
     }),
 });

@@ -15,7 +15,7 @@ const LoginPortal: React.FC = () => {
 
   const roles: Role[] = [
     { name: 'User', icon: <User size={20} />, path: '/auth/signin/user' },
-    { name: 'Admin', icon: <ShieldCheck size={20} />, path: '/admin/signin' },
+    { name: 'Admin', icon: <ShieldCheck size={20} />, path: '/admin/auth/signin' },
     { name: 'Staff', icon: <Briefcase size={20} />, path: '/auth/signin/staff' },
     { name: 'Doctor', icon: <Stethoscope size={20} />, path: '/auth/signin/doctor' },
   ];

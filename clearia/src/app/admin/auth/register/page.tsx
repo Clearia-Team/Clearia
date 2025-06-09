@@ -28,7 +28,7 @@ const Adminlogin = () => {
       data.password === "admin123" &&
       data.id === "hospital123"
     ) {
-      router.push("/admin-portal");
+      router.push("/admin/dashboard");
     } else {
       setGeneralError("Invalid Credentials, please recheck!");
     }
@@ -109,4 +109,5 @@ const Adminlogin = () => {
 };
 
 export default Adminlogin;
+
 

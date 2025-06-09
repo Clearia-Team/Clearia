@@ -7,6 +7,7 @@ datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
 }
+
 //can be a Doctor or a nurse or ADMIN
 model Account {
     id                 String  @id @default(cuid())
@@ -25,6 +26,7 @@ model Account {
     @@unique([provider, providerAccountId])
     @@index([userId])
 }
+
 model Session {
     id           String   @id @default(cuid())
     sessionToken String   @unique
@@ -33,18 +35,42 @@ model Session {
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
     @@index([userId])
 }
+
 model VerificationToken {
     identifier String
     token      String   @unique
     expires    DateTime
     @@unique([identifier, token])
 }
+
+// New Hospital model
+model Hospital {
+    id          String   @id @default(uuid())
+    name        String
+    address     String
+    city        String
+    state       String
+    zipCode     String
+    phone       String
+    email       String?
+    website     String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    
+    // Relations
+    users       User[]
+    
+    @@index([name])
+    @@index([city, state])
+}
+
 enum UserRole {
     DOCTOR
     NURSE
     ADMIN
     PATIENT
 }
+
 model Patient {
   id            String         @id @default(uuid())
   firstName     String
@@ -64,10 +90,12 @@ model Patient {
   @@index([medicalId])
   @@index([lastName])
 }
+
 model User {
   id            String         @id @default(uuid())
   name          String
   email         String         @unique
+  username      String         @unique  // New username field
   password      String
   role          UserRole       @default(NURSE)
   createdAt     DateTime       @default(now())
@@ -82,11 +110,17 @@ model User {
   sessions      Session[]
   treatmentHistory TreatmentHistory[]
 
+  // Hospital relation
+  hospitalId    String?        // New hospitalId field (optional to allow for flexibility)
+  hospital      Hospital?      @relation(fields: [hospitalId], references: [id])
   
   // Add a back-reference to Patient model
   patients      Patient[]
   @@index([email])
+  @@index([username])
+  @@index([hospitalId])
 }
+
 model IcuAdmission {
     id            String         @id @default(uuid())
     patientId     String
@@ -104,6 +138,7 @@ model IcuAdmission {
     @@index([admissionDate])
     @@index([dischargeDate])
 }
+
 model StatusUpdate {
     id             String       @id @default(uuid())
     icuAdmissionId String
@@ -117,6 +152,7 @@ model StatusUpdate {
     @@index([staffId])
     @@index([timestamp])
 }
+
 enum PatientStatus {
     CRITICAL
     STABLE

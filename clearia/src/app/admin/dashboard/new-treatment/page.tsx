@@ -28,7 +28,7 @@ const NewTreatment = () => {
   const createTreatment = api.treatment.create.useMutation({
     onSuccess: () => {
       toast.success("Treatment added successfully!");
-      router.push("/dashboard?treatmentAdded=true");
+      router.push("/admin/dashboard?treatmentAdded=true");
     },
     onError: (error) => {
       toast.error(`Error: ${error.message}`);

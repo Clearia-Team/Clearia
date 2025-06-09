@@ -130,7 +130,7 @@ const UserDashboard = () => {
         className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
       >
         <div className={`h-2 ${treatment.status === "ONGOING" ? "bg-yellow-500" :
-            treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
+          treatment.status === "COMPLETED" ? "bg-green-500" : "bg-blue-500"
           }`}></div>
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
@@ -262,13 +262,6 @@ const UserDashboard = () => {
                 <h1 className="text-3xl font-bold text-gray-800">My Treatments</h1>
                 <p className="text-gray-500">Manage your medical treatments and history</p>
               </div>
-              <button
-                onClick={() => router.push("/dashboard/new-treatment")}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
-              >
-                <PlusCircle size={18} />
-                <span>New Treatment</span>
-              </button>
             </div>
 
             {/* Treatment Summary Stats */}
@@ -498,8 +491,8 @@ const UserDashboard = () => {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors ${activeTab === item.id
-                    ? "bg-blue-600/90 text-white font-medium"
-                    : "text-blue-100 hover:bg-blue-600/50"
+                  ? "bg-blue-600/90 text-white font-medium"
+                  : "text-blue-100 hover:bg-blue-600/50"
                   }`}
               >
                 <item.icon size={18} className={activeTab === item.id ? "text-white" : "text-blue-200"} />

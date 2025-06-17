@@ -307,7 +307,7 @@ const EditTreatmentPage = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Actions</h3>
           <div className="flex flex-wrap gap-4">
             <button
-              onClick={() => router.push(`/admin/patients/${treatment.patientId}`)}
+              onClick={() => router.push(`/admin/dashboard/patients/${treatment.patientId}`)}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
             >
               View Patient Details

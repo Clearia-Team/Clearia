@@ -1,0 +1,94 @@
+name: Enforce Main Branch Rules
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+
+jobs:
+  block-direct-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ❌ Block direct push
+        run: |
+          echo "Direct pushes to main are not allowed."
+          exit 1
+
+  enforce-pr-merge:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Analyze PR
+        id: prinfo
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const YOUR_USERNAME = "ParichayeGrover";
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+            });
+
+            const approvals = reviews.data
+              .filter(r => r.state === "APPROVED")
+              .map(r => r.user.login);
+
+            const approvedByYou = approvals.includes(YOUR_USERNAME);
+            const mergedByYou = context.actor === YOUR_USERNAME;
+
+            core.setOutput("approved", approvedByYou.toString());
+            core.setOutput("merged_by_you", mergedByYou.toString());
+            core.setOutput("pr_number", pr.data.number);
+            core.setOutput("pr_sha", pr.data.merge_commit_sha);
+            core.setOutput("merged_by", context.actor);
+
+      - name: 🔁 Auto-Revert if Unauthorized
+        if: steps.prinfo.outputs.approved != 'true' || steps.prinfo.outputs.merged_by_you != 'true'
+        run: |
+          git config --global user.name "AutoRevertBot"
+          git config --global user.email "action@github.com"
+          git clone https://github.com/${{ github.repository }} repo
+          cd repo
+          git checkout main
+          git revert -m 1 ${{ steps.prinfo.outputs.pr_sha }} --no-commit
+          git commit -m "Committed without asking Parichaye"
+          git checkout -b revert-pr-${{ steps.prinfo.outputs.pr_number }}
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🚨 Create Revert PR
+        if: steps.prinfo.outputs.approved != 'true' || steps.prinfo.outputs.merged_by_you != 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🚨 Revert unauthorized PR #${{ steps.prinfo.outputs.pr_number }}"
+          branch: revert-pr-${{ steps.prinfo.outputs.pr_number }}
+          title: "🚨 Auto-Revert PR #${{ steps.prinfo.outputs.pr_number }}"
+          body: |
+            🚫 The previous PR was merged without approval from @ParichayeGrover and has been automatically reverted.
+            ❗ Only @ParichayeGrover can approve or merge into `main`.
+
+      - name: 💬 Comment warning on PR
+        if: steps.prinfo.outputs.approved != 'true' || steps.prinfo.outputs.merged_by_you != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.prinfo.outputs.pr_number }},
+              body: `🚫 @${{ steps.prinfo.outputs.merged_by }} — You are not allowed to merge into \`main\` without approval from @ParichayeGrover. This PR was auto-reverted.`
+            });

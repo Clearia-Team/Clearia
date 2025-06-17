@@ -5,7 +5,7 @@ A web application powered by PostgreSQL, Prisma, and Docker.
 ## 🚀 Getting Started
 
 Follow these steps to set up the project for development.
-
+ 
 ### 1️⃣ Clone the Repository
 ```sh
 git clone https://github.com/ParichayeGrover/Clearia.git

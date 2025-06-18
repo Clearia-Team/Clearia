@@ -8,6 +8,9 @@ import { api } from "~/trpc/react"; // Adjust path if needed
 export function PatientSignInForm() {
   const router = useRouter();
   const [generalError, setGeneralError] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
   const {
     register,
@@ -17,27 +20,25 @@ export function PatientSignInForm() {
     defaultValues: {
       email: "",
       password: "",
-      medicalId: "",
     },
   });
 
   const verifyCredentials = api.user.verifyCredentials.useMutation();
+  const resetPassword = api.user.resetPassword.useMutation(); // Assuming you have this mutation
 
   const onSubmit = async (data: {
     email: string;
     password: string;
-    medicalId: string;
   }) => {
     setGeneralError("");
     try {
       const result = await verifyCredentials.mutateAsync({
         email: data.email,
         password: data.password,
-        medicalId: data.medicalId,
       });
 
       if (!result.success) {
-        setGeneralError("Invalid credentials");
+        setGeneralError("Invalid email or password");
         return;
       }
 
@@ -66,27 +67,99 @@ export function PatientSignInForm() {
     router.push("/dashboard");
   };
 
-  return (
-    <div className="w-full max-w-md rounded-2xl bg-white/80 p-4 shadow-2xl backdrop-blur-lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
-        <div>
-          <label
-            htmlFor="medicalId"
-            className="block text-sm font-semibold text-gray-700"
-          >
-            Medical ID
-          </label>
-          <input
-            id="medicalId"
-            type="text"
-            {...register("medicalId", { required: "Medical ID is required" })}
-            className="mt-1 w-full rounded-md border border-gray-300 px-4 py-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.medicalId && (
-            <p className="text-sm text-red-500">{errors.medicalId.message}</p>
-          )}
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordMessage("");
+    
+    if (!forgotPasswordEmail) {
+      setForgotPasswordMessage("Please enter your email address");
+      return;
+    }
+
+    try {
+      await resetPassword.mutateAsync({ email: forgotPasswordEmail });
+      setForgotPasswordMessage("Password reset instructions have been sent to your email");
+      setForgotPasswordEmail("");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setForgotPasswordMessage(err.message ?? "Failed to send reset email");
+      } else {
+        setForgotPasswordMessage("An error occurred. Please try again.");
+      }
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="w-full max-w-md rounded-2xl bg-white/80 p-4 shadow-2xl backdrop-blur-lg">
+        <div className="mb-4 text-center">
+          <h2 className="text-xl font-semibold text-gray-800">Reset Password</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Enter your email address and we'll send you a link to reset your password
+          </p>
         </div>
 
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <div>
+            <label
+              htmlFor="forgotEmail"
+              className="block text-sm font-semibold text-gray-700"
+            >
+              Email Address
+            </label>
+            <input
+              id="forgotEmail"
+              type="email"
+              value={forgotPasswordEmail}
+              onChange={(e) => setForgotPasswordEmail(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-4 py-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          {forgotPasswordMessage && (
+            <p className={`text-center text-sm ${
+              forgotPasswordMessage.includes("sent") 
+                ? "text-green-600" 
+                : "text-red-600"
+            }`}>
+              {forgotPasswordMessage}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={resetPassword.isLoading}
+            className={`w-full rounded-md bg-blue-600 py-2 font-medium text-white transition ${
+              resetPassword.isLoading 
+                ? "cursor-not-allowed opacity-50" 
+                : "hover:bg-blue-700"
+            }`}
+          >
+            {resetPassword.isLoading ? "Sending..." : "Send Reset Link"}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => {
+              setShowForgotPassword(false);
+              setForgotPasswordMessage("");
+              setForgotPasswordEmail("");
+            }}
+            className="text-sm text-blue-600 hover:text-blue-800 transition"
+          >
+            ← Back to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-md rounded-2xl bg-white/80 p-4 shadow-2xl backdrop-blur-lg">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label
             htmlFor="email"
@@ -146,6 +219,15 @@ export function PatientSignInForm() {
           {isSubmitting ? "Logging in..." : "Login"}
         </button>
       </form>
+
+      <div className="mt-3 text-center">
+        <button
+          onClick={() => setShowForgotPassword(true)}
+          className="text-sm text-blue-600 hover:text-blue-800 transition"
+        >
+          Forgot your password?
+        </button>
+      </div>
 
       <div className="my-4 text-center text-gray-500">or</div>
 

@@ -369,9 +369,10 @@ const DoctorDashboard = () => {
     return status.charAt(0) + status.slice(1).toLowerCase();
   };
 
-const handlePatientClick = (id: string) => {
-  router.push(`/doctor/dashboard/${id}`);
-};
+  const handlePatientClick = (id: string) => {
+    router.push(`/doctor/dashboard/${id}`);
+  };
+
   const handleLogout = () => {
     console.log("Logging out...");
   };
@@ -480,6 +481,56 @@ const handlePatientClick = (id: string) => {
         className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-sm"
       >
         <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="mb-2 flex items-center gap-3">
+              <h4 className="font-medium text-gray-800 transition-colors group-hover:text-blue-600">
+                {patient.name}
+              </h4>
+              <span className="text-sm text-gray-500">({patient.id})</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${getCategoryBadgeClasses(patient.category)}`}
+              >
+                {getDisplayCategory(patient.category)}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClasses(patient.status)}`}
+              >
+                {getDisplayStatus(patient.status)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <span className="font-medium">{patient.disease}</span>
+              <span>
+                {patient.age} years • {patient.gender}
+              </span>
+              {patient.icuNo && (
+                <span className="flex items-center font-medium text-red-600">
+                  <AlertCircle size={14} className="mr-1" />
+                  ICU: {patient.icuNo}
+                </span>
+              )}
+              {patient.wardNo && !patient.icuNo && (
+                <span className="flex items-center text-blue-600">
+                  <Bed size={14} className="mr-1" />
+                  Ward: {patient.wardNo}
+                </span>
+              )}
+              <span className="text-gray-500">
+                BP: {patient.vitals.bloodPressure}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">
+              {formatDate(patient.lastVisit)}
+            </span>
+            <ChevronRight
+              className="text-gray-400 transition-colors group-hover:text-blue-600"
+              size={16}
+            />
+          </div>
         </div>
       </div>
     );

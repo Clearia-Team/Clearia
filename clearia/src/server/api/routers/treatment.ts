@@ -225,7 +225,7 @@ export const treatmentRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // First, find the Patient record associated with the user
-      const patient = await ctx.db.patient.findUnique({
+      const patient = await ctx.db.patients.findUnique({
         where: {
           userId: input.userId,
         },

@@ -27,75 +27,66 @@ const createUserSchema = userSchema.omit({
 
 export const userRouter = createTRPCRouter({
   // Updated to work with new schema fields
-  verifyCredentials: publicProcedure
-    .input(
-      z.object({
-        email: z.string().email(),
-        password: z.string().min(1),
-        medicalId: z.string().min(1),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const user = await ctx.db.user.findUnique({
-          where: { email: input.email },
-          include: {
-            patients: true,
-            hospital: {
-              select: {
-                id: true,
-                name: true,
-                city: true,
-                state: true,
-              }
+verifyCredentials: publicProcedure
+  .input(
+    z.object({
+      email: z.string().email(),
+      password: z.string().min(1),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    try {
+      const user = await ctx.db.user.findUnique({
+        where: { email: input.email },
+        include: {
+          patients: true,
+          hospital: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              state: true,
             },
           },
-        });
+        },
+      });
 
-        if (!user?.password) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "Invalid email or password",
-          });
-        }
-
-        const isMatch = await bcrypt.compare(input.password, user.password);
-        if (!isMatch) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "Invalid email or password",
-          });
-        }
-
-        const patient = user.patients.find(p => p.medicalId === input.medicalId);
-        if (!patient) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "Medical ID does not match any patient record",
-          });
-        }
-
-        return {
-          success: true,
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            hospital: user.hospital,
-          },
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
+      if (!user?.password) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Authentication failed",
-          cause: error,
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
         });
       }
-    }),
+
+      const isMatch = await bcrypt.compare(input.password, user.password);
+      if (!isMatch) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          hospital: user.hospital,
+        },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Authentication failed",
+        cause: error,
+      });
+    }
+  }),
 
   // Admin login verification
   verifyAdminCredentials: publicProcedure

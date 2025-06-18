@@ -1,78 +1,180 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 generator client {
-    provider = "prisma-client-js"
-}
-datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "prisma-client-js"
 }
 
-//can be a Doctor or a nurse or ADMIN
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(uuid())
+  name             String
+  email            String             @unique
+  username         String?            @unique
+  password         String
+  role             UserRole           @default(NURSE)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  emailVerified    DateTime?
+  image            String?
+  hospitalId       String?
+  Account          Account[]
+  icuAdmissions    IcuAdmission[]     @relation("AdmittingStaff")
+  Session          Session[]
+  statusUpdates    StatusUpdate[]     @relation("UpdatingStaff")
+  treatments       Treatment[]        @relation("TreatmentProvider")
+  treatmentHistory TreatmentHistory[]
+  hospital         Hospital?          @relation(fields: [hospitalId], references: [id])
+  patients         patients?
+
+  @@index([email])
+  @@index([username])
+  @@index([hospitalId])
+}
+
+model Hospital {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  city      String
+  state     String
+  zipCode   String
+  phone     String
+  email     String?
+  website   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+
+  @@index([name])
+  @@index([city, state])
+}
+
+model IcuAdmission {
+  id            String         @id @default(uuid())
+  patientId     String
+  bedNumber     Int
+  admissionDate DateTime       @default(now())
+  dischargeDate DateTime?
+  staffId       String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  patient       patients       @relation(fields: [patientId], references: [id])
+  staff         User           @relation("AdmittingStaff", fields: [staffId], references: [id])
+  statusUpdates StatusUpdate[]
+
+  @@index([patientId])
+  @@index([staffId])
+  @@index([admissionDate])
+  @@index([dischargeDate])
+}
+
+model StatusUpdate {
+  id             String        @id @default(uuid())
+  icuAdmissionId String
+  status         PatientStatus
+  notes          String?
+  timestamp      DateTime      @default(now())
+  staffId        String
+  icuAdmission   IcuAdmission  @relation(fields: [icuAdmissionId], references: [id])
+  staff          User          @relation("UpdatingStaff", fields: [staffId], references: [id])
+
+  @@index([icuAdmissionId])
+  @@index([staffId])
+  @@index([timestamp])
+}
+
+model Treatment {
+  id        String             @id @default(uuid())
+  name      String
+  date      DateTime
+  hospital  String
+  status    TreatmentStatus    @default(ONGOING)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  patientId String
+  doctorId  String
+  doctor    User               @relation("TreatmentProvider", fields: [doctorId], references: [id])
+  patient   patients           @relation(fields: [patientId], references: [id])
+  history   TreatmentHistory[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([date])
+}
+
+model TreatmentHistory {
+  id                    String    @id @default(cuid())
+  session               Int
+  date                  DateTime
+  notes                 String
+  progress              String
+  adjustments           String
+  sideEffects           String
+  prescribedMedications String?
+  nextReview            DateTime?
+  treatmentId           String
+  doctorId              String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  doctor                User      @relation(fields: [doctorId], references: [id])
+  treatment             Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@index([treatmentId])
+  @@index([doctorId])
+}
+
 model Account {
-    id                 String  @id @default(cuid())
-    userId             String
-    type               String
-    provider           String
-    providerAccountId  String
-    refresh_token      String?  @db.Text
-    access_token       String?  @db.Text
-    expires_at         Int?
-    token_type         String?
-    scope              String?
-    id_token           String?  @db.Text
-    session_state      String?
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    @@unique([provider, providerAccountId])
-    @@index([userId])
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    @@index([userId])
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
-    @@unique([identifier, token])
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
-// New Hospital model
-model Hospital {
-    id          String   @id @default(uuid())
-    name        String
-    address     String
-    city        String
-    state       String
-    zipCode     String
-    phone       String
-    email       String?
-    website     String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    
-    // Relations
-    users       User[]
-    
-    @@index([name])
-    @@index([city, state])
+model medical_ids {
+  id          String    @id
+  medicalId   String    @unique
+  description String?
+  isUsed      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  usedAt      DateTime?
+  patientId   String?   @unique
+  patients    patients? @relation(fields: [patientId], references: [id])
 }
 
-enum UserRole {
-    DOCTOR
-    NURSE
-    ADMIN
-    PATIENT
-}
-
-model Patient {
-  id            String         @id @default(uuid())
+model patients {
+  id            String         @id
   firstName     String
   lastName      String
   dateOfBirth   DateTime
@@ -80,140 +182,35 @@ model Patient {
   allergies     String?
   bloodType     String?
   createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  icuAdmissions IcuAdmission[]
-  treatments    Treatment[]    // Add relation to treatments
-  
-  // Relation to User
+  updatedAt     DateTime
   userId        String         @unique
-  user          User           @relation(fields: [userId], references: [id])
-  @@index([medicalId])
+  icuAdmissions IcuAdmission[]
+  treatments    Treatment[]
+  medical_ids   medical_ids?
+  User          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([lastName])
+  @@index([medicalId])
 }
 
-model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  username      String         @unique  // New username field
-  password      String
-  role          UserRole       @default(NURSE)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  icuAdmissions IcuAdmission[] @relation("AdmittingStaff")
-  statusUpdates StatusUpdate[] @relation("UpdatingStaff")
-  treatments    Treatment[]    @relation("TreatmentProvider") // Add relation to treatments
-  // NextAuth fields
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  treatmentHistory TreatmentHistory[]
-
-  // Hospital relation
-  hospitalId    String?        // New hospitalId field (optional to allow for flexibility)
-  hospital      Hospital?      @relation(fields: [hospitalId], references: [id])
-  
-  // Add a back-reference to Patient model
-  patients      Patient[]
-  @@index([email])
-  @@index([username])
-  @@index([hospitalId])
-}
-
-model IcuAdmission {
-    id            String         @id @default(uuid())
-    patientId     String
-    patient       Patient        @relation(fields: [patientId], references: [id])
-    bedNumber     Int
-    admissionDate DateTime       @default(now())
-    dischargeDate DateTime?
-    staffId       String
-    staff         User           @relation("AdmittingStaff", fields: [staffId], references: [id])
-    createdAt     DateTime       @default(now())
-    updatedAt     DateTime       @updatedAt
-    statusUpdates StatusUpdate[]
-    @@index([patientId])
-    @@index([staffId])
-    @@index([admissionDate])
-    @@index([dischargeDate])
-}
-
-model StatusUpdate {
-    id             String       @id @default(uuid())
-    icuAdmissionId String
-    icuAdmission   IcuAdmission @relation(fields: [icuAdmissionId], references: [id])
-    status         PatientStatus
-    notes          String?
-    timestamp      DateTime     @default(now())
-    staffId        String
-    staff          User         @relation("UpdatingStaff", fields: [staffId], references: [id])
-    @@index([icuAdmissionId])
-    @@index([staffId])
-    @@index([timestamp])
+enum UserRole {
+  DOCTOR
+  NURSE
+  ADMIN
+  PATIENT
 }
 
 enum PatientStatus {
-    CRITICAL
-    STABLE
-    IMPROVING
-    RECOVERED
-    DECEASED
+  CRITICAL
+  STABLE
+  IMPROVING
+  RECOVERED
+  DECEASED
 }
 
-// New Treatment model to store treatment data
-model Treatment {
-    id          String        @id @default(uuid())
-    name        String
-    date        DateTime
-    hospital    String
-    status      TreatmentStatus @default(ONGOING)
-    createdAt   DateTime      @default(now())
-    updatedAt   DateTime      @updatedAt
-    
-    // Relations
-    patientId   String
-    patient     Patient       @relation(fields: [patientId], references: [id])
-    doctorId    String
-    doctor      User          @relation("TreatmentProvider", fields: [doctorId], references: [id])
-    history         TreatmentHistory[]
-
-    
-    @@index([patientId])
-    @@index([doctorId])
-    @@index([date])
-}
-
-// Treatment status enum
 enum TreatmentStatus {
-    SCHEDULED
-    ONGOING
-    COMPLETED
-    CANCELLED
-}
-
-model TreatmentHistory {
-  id                    String    @id @default(cuid())
-  session               Int
-  date                  DateTime
-  notes                 String    @db.Text
-  progress              String    @db.Text
-  adjustments           String    @db.Text
-  sideEffects           String    @db.Text
-  prescribedMedications String?   @db.Text
-  nextReview            DateTime?
-  
-  // Relations
-  treatmentId           String
-  treatment             Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
-  
-  // Doctor relation - connects to the same doctor as the parent treatment
-  doctorId              String
-  doctor                User      @relation(fields: [doctorId], references: [id])
-
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  @@index([treatmentId])
-  @@index([doctorId])
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
 }

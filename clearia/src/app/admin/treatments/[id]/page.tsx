@@ -232,8 +232,6 @@ const EditTreatmentPage = () => {
                   <option value="COMPLETED">Completed</option>
                   <option value="SCHEDULED">Scheduled</option>
                   <option value="CANCELLED">Cancelled</option>
-                  <option value="CRITICAL">Critical</option>
-                  <option value="STABLE">Stable</option>
                 </select>
               </div>
 

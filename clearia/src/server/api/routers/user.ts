@@ -27,6 +27,10 @@ const createUserSchema = userSchema.omit({
 
 export const userRouter = createTRPCRouter({
   // Updated to work with new schema fields
+// Key fixes needed in your user router:
+
+// 1. In verifyCredentials, you're including patients relation but Patient model
+//    has a one-to-one relation with User, so it should be:
 verifyCredentials: publicProcedure
   .input(
     z.object({
@@ -39,7 +43,7 @@ verifyCredentials: publicProcedure
       const user = await ctx.db.user.findUnique({
         where: { email: input.email },
         include: {
-          patients: true,
+          Patient: true, // Changed from 'patients' to 'Patient' (one-to-one relation)
           hospital: {
             select: {
               id: true,
@@ -72,8 +76,10 @@ verifyCredentials: publicProcedure
           id: user.id,
           email: user.email,
           username: user.username,
+          name: user.name, // Include name in response
           role: user.role,
           hospital: user.hospital,
+          patient: user.Patient, // Include patient data if exists
         },
       };
     } catch (error) {
@@ -83,6 +89,185 @@ verifyCredentials: publicProcedure
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Authentication failed",
+        cause: error,
+      });
+    }
+  }),
+
+// 2. Add validation for unique constraints in createUser
+createUser: publicProcedure
+  .input(createUserSchema)
+  .mutation(async ({ ctx, input }) => {
+    try {
+      // Check if email already exists
+      const existingEmail = await ctx.db.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (existingEmail) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Email already exists",
+        });
+      }
+
+      // Check if username already exists
+      const existingUsername = await ctx.db.user.findUnique({
+        where: { username: input.username },
+      });
+
+      if (existingUsername) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Username already exists",
+        });
+      }
+
+      // Verify hospital exists if hospitalId is provided
+      if (input.hospitalId) {
+        const hospital = await ctx.db.hospital.findUnique({
+          where: { id: input.hospitalId },
+        });
+
+        if (!hospital) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Hospital not found",
+          });
+        }
+      }
+
+      const hashedPassword = await bcrypt.hash(input.password, 12);
+
+      const user = await ctx.db.user.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          username: input.username,
+          password: hashedPassword,
+          role: input.role,
+          hospitalId: input.hospitalId,
+          image: input.image,
+        },
+        include: {
+          hospital: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              state: true,
+            }
+          },
+        },
+      });
+
+      // Don't return password in response
+      const { password: _, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create user",
+        cause: error,
+      });
+    }
+  }),
+
+// 3. Add validation for unique constraints in updateUser
+updateUser: publicProcedure
+  .input(
+    userSchema.partial().extend({
+      id: z.string().uuid(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    try {
+      const { id, password, email, username, ...updateData } = input;
+
+      // Check if email already exists (if being updated)
+      if (email) {
+        const existingEmail = await ctx.db.user.findFirst({
+          where: { 
+            email: email,
+            NOT: { id: id }
+          },
+        });
+
+        if (existingEmail) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Email already exists",
+          });
+        }
+      }
+
+      // Check if username already exists (if being updated)
+      if (username) {
+        const existingUsername = await ctx.db.user.findFirst({
+          where: { 
+            username: username,
+            NOT: { id: id }
+          },
+        });
+
+        if (existingUsername) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Username already exists",
+          });
+        }
+      }
+
+      // If updating password, hash it
+      const dataToUpdate: any = { ...updateData };
+      if (email) dataToUpdate.email = email;
+      if (username) dataToUpdate.username = username;
+      if (password) {
+        dataToUpdate.password = await bcrypt.hash(password, 12);
+      }
+
+      // Verify hospital exists if hospitalId is being updated
+      if (input.hospitalId) {
+        const hospital = await ctx.db.hospital.findUnique({
+          where: { id: input.hospitalId },
+        });
+
+        if (!hospital) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Hospital not found",
+          });
+        }
+      }
+
+      const user = await ctx.db.user.update({
+        where: { id },
+        data: dataToUpdate,
+        include: {
+          hospital: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              state: true,
+            }
+          },
+        },
+      });
+
+      // Don't return password in response
+      const { password: _, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to update user",
         cause: error,
       });
     }
@@ -165,148 +350,6 @@ verifyCredentials: publicProcedure
       }
     }),
 
-  // Updated createUser with new schema fields
-  createUser: publicProcedure
-    .input(createUserSchema)
-    .mutation(async ({ ctx, input }) => {
-      try {
-        // Check if email already exists
-        const existingEmail = await ctx.db.user.findUnique({
-          where: { email: input.email },
-        });
-
-        if (existingEmail) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "Email already exists",
-          });
-        }
-
-        // Check if username already exists
-        const existingUsername = await ctx.db.user.findUnique({
-          where: { username: input.username },
-        });
-
-        if (existingUsername) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "Username already exists",
-          });
-        }
-
-        // Verify hospital exists if hospitalId is provided
-        if (input.hospitalId) {
-          const hospital = await ctx.db.hospital.findUnique({
-            where: { id: input.hospitalId },
-          });
-
-          if (!hospital) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Hospital not found",
-            });
-          }
-        }
-
-        const hashedPassword = await bcrypt.hash(input.password, 12);
-
-        const user = await ctx.db.user.create({
-          data: {
-            name: input.name,
-            email: input.email,
-            username: input.username,
-            password: hashedPassword,
-            role: input.role,
-            hospitalId: input.hospitalId,
-            image: input.image,
-          },
-          include: {
-            hospital: {
-              select: {
-                id: true,
-                name: true,
-                city: true,
-                state: true,
-              }
-            },
-          },
-        });
-
-        // Don't return password in response
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create user",
-          cause: error,
-        });
-      }
-    }),
-
-  // Updated updateUser with new schema fields
-  updateUser: publicProcedure
-    .input(
-      userSchema.partial().extend({
-        id: z.string().uuid(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const { id, password, ...updateData } = input;
-
-        // If updating password, hash it
-        const dataToUpdate: any = { ...updateData };
-        if (password) {
-          dataToUpdate.password = await bcrypt.hash(password, 12);
-        }
-
-        // Verify hospital exists if hospitalId is being updated
-        if (input.hospitalId) {
-          const hospital = await ctx.db.hospital.findUnique({
-            where: { id: input.hospitalId },
-          });
-
-          if (!hospital) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Hospital not found",
-            });
-          }
-        }
-
-        const user = await ctx.db.user.update({
-          where: { id },
-          data: dataToUpdate,
-          include: {
-            hospital: {
-              select: {
-                id: true,
-                name: true,
-                city: true,
-                state: true,
-              }
-            },
-          },
-        });
-
-        // Don't return password in response
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to update user",
-          cause: error,
-        });
-      }
-    }),
 
   deleteUser: publicProcedure
     .input(z.object({ id: z.string().uuid() }))

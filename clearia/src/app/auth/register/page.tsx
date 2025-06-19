@@ -9,6 +9,7 @@ import { ShieldCheck } from 'lucide-react';
 interface PatientSignUpFormData {
   firstName: string;
   lastName: string;
+  username: string;
   dateOfBirth: string; // HTML date input returns string
   medicalId: string;
   allergies?: string;
@@ -112,6 +113,9 @@ export default function PatientSignUpPage() {
       if (!data.lastName?.trim()) {
         throw new Error('Last name is required');
       }
+      if (!data.username?.trim()) {
+        throw new Error('Username is required');
+      }
       if (!data.dateOfBirth) {
         throw new Error('Date of birth is required');
       }
@@ -135,6 +139,7 @@ export default function PatientSignUpPage() {
       const mutationData = {
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
+        username: data.username.trim(),
         dateOfBirth,
         medicalId: data.medicalId.trim(),
         email: data.email.trim().toLowerCase(), // Normalize email
@@ -194,6 +199,26 @@ export default function PatientSignUpPage() {
                 minLength: {
                   value: 2,
                   message: 'Last name must be at least 2 characters'
+                }
+              }
+            },
+            { 
+              id: 'username' as const, 
+              label: 'Username', 
+              required: true,
+              validation: {
+                required: 'Username is required',
+                minLength: {
+                  value: 3,
+                  message: 'Username must be at least 3 characters'
+                },
+                maxLength: {
+                  value: 30,
+                  message: 'Username must be less than 30 characters'
+                },
+                pattern: {
+                  value: /^[a-zA-Z0-9_-]+$/,
+                  message: 'Username can only contain letters, numbers, underscores, and hyphens'
                 }
               }
             },
@@ -285,6 +310,7 @@ export default function PatientSignUpPage() {
                   id === 'password' ? 'new-password' :
                   id === 'firstName' ? 'given-name' :
                   id === 'lastName' ? 'family-name' :
+                  id === 'username' ? 'username' :
                   'off'
                 }
               />

@@ -3,15 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id               String             @id @default(uuid())
   name             String
   email            String             @unique
-  username         String?            @unique
+  username         String             @unique
   password         String
   role             UserRole           @default(NURSE)
   createdAt        DateTime           @default(now())
@@ -21,12 +22,12 @@ model User {
   hospitalId       String?
   Account          Account[]
   icuAdmissions    IcuAdmission[]     @relation("AdmittingStaff")
+  Patient          Patient?
   Session          Session[]
   statusUpdates    StatusUpdate[]     @relation("UpdatingStaff")
   treatments       Treatment[]        @relation("TreatmentProvider")
   treatmentHistory TreatmentHistory[]
   hospital         Hospital?          @relation(fields: [hospitalId], references: [id])
-  patients         patients?
 
   @@index([email])
   @@index([username])
@@ -60,7 +61,7 @@ model IcuAdmission {
   staffId       String
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  patient       patients       @relation(fields: [patientId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
   staff         User           @relation("AdmittingStaff", fields: [staffId], references: [id])
   statusUpdates StatusUpdate[]
 
@@ -96,7 +97,7 @@ model Treatment {
   patientId String
   doctorId  String
   doctor    User               @relation("TreatmentProvider", fields: [doctorId], references: [id])
-  patient   patients           @relation(fields: [patientId], references: [id])
+  patient   Patient            @relation(fields: [patientId], references: [id])
   history   TreatmentHistory[]
 
   @@index([patientId])
@@ -162,18 +163,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model medical_ids {
-  id          String    @id
-  medicalId   String    @unique
-  description String?
-  isUsed      Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  usedAt      DateTime?
-  patientId   String?   @unique
-  patients    patients? @relation(fields: [patientId], references: [id])
-}
-
-model patients {
+model Patient {
   id            String         @id
   firstName     String
   lastName      String
@@ -185,9 +175,8 @@ model patients {
   updatedAt     DateTime
   userId        String         @unique
   icuAdmissions IcuAdmission[]
+  User          User           @relation(fields: [userId], references: [id])
   treatments    Treatment[]
-  medical_ids   medical_ids?
-  User          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([lastName])
   @@index([medicalId])

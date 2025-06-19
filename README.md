@@ -43,7 +43,11 @@ cp .env.example .env
 
 ### 8️⃣ Push Database Schema
 ```sh
-npm run db:push
+npm run db push
+// for remote on supabase
+npx prisma generate
+npx prisma migrate dev   # Or `npx prisma db pull` if schema is already live
+
 ```
 
 Modify `.env` with your database credentials and other necessary configurations.

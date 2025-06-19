@@ -17,7 +17,7 @@ const patientSchema = z.object({
 
 export const patientRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.db.patients.findMany({
+    return ctx.db.patient.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         User: {
@@ -33,7 +33,7 @@ export const patientRouter = createTRPCRouter({
   getById: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(({ ctx, input }) => {
-      return ctx.db.patients.findUnique({
+      return ctx.db.patient.findUnique({
         where: { id: input.id },
         include: {
           User: {
@@ -60,6 +60,7 @@ export const patientRouter = createTRPCRouter({
         bloodType: z.string().optional(),
         email: z.string().email(),
         password: z.string().min(6),
+        username: z.string().min(3, "Username must be at least 3 characters long"), // Added username field
         name: z.string().optional(), // Optional name field for User
       }),
     )
@@ -74,8 +75,17 @@ export const patientRouter = createTRPCRouter({
           throw new Error("An account with this email already exists");
         }
 
+        // Check if username already exists
+        const existingUserByUsername = await ctx.db.user.findUnique({
+          where: { username: input.username },
+        });
+
+        if (existingUserByUsername) {
+          throw new Error("This username is already taken");
+        }
+
         // Check if medical ID already exists
-        const existingPatientByMedicalId = await ctx.db.patients.findUnique({
+        const existingPatientByMedicalId = await ctx.db.patient.findUnique({
           where: { medicalId: input.medicalId },
         });
 
@@ -90,6 +100,7 @@ export const patientRouter = createTRPCRouter({
         const user = await ctx.db.user.create({
           data: {
             email: input.email,
+            username: input.username, // Added username field
             password: hashedPassword,
             role: "PATIENT",
             name: input.name || `${input.firstName} ${input.lastName}`,
@@ -97,7 +108,7 @@ export const patientRouter = createTRPCRouter({
         });
 
         // Create patient with the user ID
-        const patient = await ctx.db.patients.create({
+        const patient = await ctx.db.patient.create({
           data: {
             id: user.id, // Use the same ID as the user (based on your schema relationship)
             firstName: input.firstName,
@@ -114,6 +125,7 @@ export const patientRouter = createTRPCRouter({
               select: {
                 name: true,
                 email: true,
+                username: true, // Include username in response
               },
             },
           },
@@ -156,7 +168,7 @@ export const patientRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id, ...updateData } = input;
       
-      return ctx.db.patients.update({
+      return ctx.db.patient.update({
         where: { id },
         data: {
           ...updateData,
@@ -167,6 +179,7 @@ export const patientRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
+              username: true, // Include username in response
             },
           },
         },
@@ -177,7 +190,7 @@ export const patientRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       // Note: This will cascade delete the User due to onDelete: Cascade in the schema
-      return ctx.db.patients.delete({
+      return ctx.db.patient.delete({
         where: { id: input.id },
       });
     }),
@@ -212,6 +225,7 @@ export const patientRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
+              username: true, // Include username in response
             },
           },
           history: {
@@ -229,13 +243,14 @@ export const patientRouter = createTRPCRouter({
   getPatientByMedicalId: publicProcedure
     .input(z.object({ medicalId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.patients.findUnique({
+      return ctx.db.patient.findUnique({
         where: { medicalId: input.medicalId },
         include: {
           User: {
             select: {
               name: true,
               email: true,
+              username: true, // Include username in response
             },
           },
         },
